@@ -3,7 +3,7 @@ import OpenAI, { APIError } from 'openai';
 
 export async function POST(request: NextRequest) {
   try {
-    const { apiKey, model, prompt } = await request.json();
+    const { apiKey, model, prompt, temperature = 0.7 } = await request.json();
 
     if (!apiKey || !model || !prompt) {
       return NextResponse.json(
@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
           content: prompt,
         },
       ],
+      temperature: temperature,
     });
 
     const result = completion.choices[0]?.message?.content || 'No response content';
