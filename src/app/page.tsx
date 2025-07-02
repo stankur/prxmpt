@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { PreviewContainer } from '../components/PreviewContainer';
 import { InputItem } from '../components/InputItem';
+import { PromptItem } from '../components/PromptItem';
 
 // Cast to fix React 19 JSX.Element vs ReactNode compatibility
 const MonacoEditor = Editor as unknown as React.FC<{
@@ -31,13 +32,19 @@ export default function Home() {
   const [inputText, setInputText] = useState('');
   const [inputType, setInputType] = useState<'string' | 'object' | null>(null);
   const [showInputHelp, setShowInputHelp] = useState(false);
-  const [showContentHelp, setShowContentHelp] = useState(false);
   const [expandedInput, setExpandedInput] = useState<number | null>(null);
   const [expandAllInputs, setExpandAllInputs] = useState(true);
   
   // Prompt data
   const [prompt, setPrompt] = useState('');
   const [availableVariables, setAvailableVariables] = useState<string[]>([]);
+  const [promptData, setPromptData] = useState<Array<{ prompt: string; llm: { model: string; temperature: number } }>>([]);
+  const [expandedPrompt, setExpandedPrompt] = useState<number | null>(null);
+  const [expandAllPrompts, setExpandAllPrompts] = useState(true);
+  const [showModelSettings, setShowModelSettings] = useState(false);
+  const [showCurrentPrompts, setShowCurrentPrompts] = useState(true);
+  const [showVariablesSidebar, setShowVariablesSidebar] = useState(true);
+  const [showContentHelp, setShowContentHelp] = useState(false);
   
   // Run configuration
   const [apiKey, setApiKey] = useState('');
@@ -195,13 +202,6 @@ export default function Home() {
     }
   };
 
-  const handleVariableClick = (variable: string) => {
-    setPrompt(prev => prev + `{${variable}}`);
-  };
-
-  const handleContentClick = () => {
-    setPrompt(prev => prev + `{content}`);
-  };
 
   const handleRemoveInput = (index: number) => {
     const newInputData = inputData.filter((_, i) => i !== index);
@@ -224,10 +224,105 @@ export default function Home() {
     }
   };
 
+  const handleAddPrompt = () => {
+    if (!prompt.trim()) return;
+    
+    if (!model) {
+      setShowModelSettings(true);
+      return;
+    }
+    
+    const newPrompt = {
+      prompt: prompt.trim(),
+      llm: {
+        model: model,
+        temperature: temperature
+      }
+    };
+    
+    setPromptData([...promptData, newPrompt]);
+    setPrompt('');
+    setShowModelSettings(false);
+  };
+
+  const validatePromptSchema = (prompt: {prompt: unknown, llm: {model: unknown, temperature: unknown}}): { isValid: boolean; error?: string } => {
+    if (!prompt || typeof prompt !== 'object') {
+      return { isValid: false, error: 'Must be a valid object' };
+    }
+    
+    if (!prompt.prompt || typeof prompt.prompt !== 'string') {
+      return { isValid: false, error: 'Missing or invalid "prompt" field (must be string)' };
+    }
+    
+    if (!prompt.llm || typeof prompt.llm !== 'object') {
+      return { isValid: false, error: 'Missing or invalid "llm" field (must be object)' };
+    }
+    
+    if (!prompt.llm.model || typeof prompt.llm.model !== 'string') {
+      return { isValid: false, error: 'Missing or invalid "llm.model" field (must be string)' };
+    }
+    
+    if (typeof prompt.llm.temperature !== 'number' || prompt.llm.temperature < 0) {
+      return { isValid: false, error: 'Invalid "llm.temperature" field (must be number >= 0)' };
+    }
+    
+    // Check if model exists in available models
+    if (models.length > 0 && !models.some(m => m.id === prompt.llm.model)) {
+      return { isValid: false, error: `Model "${prompt.llm.model}" not found in available models` };
+    }
+    
+    return { isValid: true };
+  };
+
+  const handleEditPrompt = (index: number, newValue: string) => {
+    // Just update without validation during editing
+    try {
+      const parsedPrompt = JSON.parse(newValue.trim());
+      const newPromptData = [...promptData];
+      newPromptData[index] = parsedPrompt;
+      setPromptData(newPromptData);
+    } catch {
+      // Invalid JSON during editing - ignore, let them continue typing
+    }
+  };
+
+  const handlePromptBlur = (index: number, newValue: string) => {
+    try {
+      const parsedPrompt = JSON.parse(newValue.trim());
+      const validation = validatePromptSchema(parsedPrompt);
+      
+      if (!validation.isValid) {
+        alert(`Invalid prompt: ${validation.error}`);
+        return;
+      }
+      
+      const newPromptData = [...promptData];
+      newPromptData[index] = parsedPrompt;
+      setPromptData(newPromptData);
+    } catch {
+      alert('Invalid JSON format');
+    }
+  };
+
+  const handleRemovePrompt = (index: number) => {
+    const newPromptData = promptData.filter((_, i) => i !== index);
+    setPromptData(newPromptData);
+  };
+
+
   const handleRun = async () => {
-    if (!apiKey || !model || !prompt || inputData.length === 0) {
+    if (!apiKey || promptData.length === 0 || inputData.length === 0) {
       alert('Please fill in all required fields');
       return;
+    }
+
+    // Validate all prompts before running
+    for (const [index, prompt] of promptData.entries()) {
+      const validation = validatePromptSchema(prompt);
+      if (!validation.isValid) {
+        alert(`Invalid prompt ${index + 1}: ${validation.error}`);
+        return;
+      }
     }
 
     setLoading(true);
@@ -236,48 +331,61 @@ export default function Home() {
     setActiveTab('output');
 
     try {
-      const promises = inputData.map(async (item) => {
-        let processedPrompt = prompt;
-        
-        if (typeof item === 'object') {
-          availableVariables.forEach(variable => {
-            const value = variable.split('.').reduce((obj: unknown, key: string) => {
-              if (obj && typeof obj === 'object' && key in obj) {
-                return (obj as Record<string, unknown>)[key];
+      const promises = [];
+      
+      // Create a promise for each input × prompt combination
+      for (const [inputIndex, inputItem] of inputData.entries()) {
+        for (const [promptIndex, promptItem] of promptData.entries()) {
+          let processedPrompt = promptItem.prompt;
+          
+          if (typeof inputItem === 'object') {
+            availableVariables.forEach(variable => {
+              const value = variable.split('.').reduce((obj: unknown, key: string) => {
+                if (obj && typeof obj === 'object' && key in obj) {
+                  return (obj as Record<string, unknown>)[key];
+                }
+                return undefined;
+              }, inputItem as unknown);
+              processedPrompt = processedPrompt.replace(new RegExp(`{${variable}}`, 'g'), String(value || ''));
+            });
+          } else {
+            // Handle string inputs with {content} variable
+            processedPrompt = processedPrompt.replace(new RegExp(`{content}`, 'g'), String(inputItem));
+          }
+
+          promises.push(
+            fetch('/api/chat', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                apiKey,
+                model: promptItem.llm.model,
+                prompt: processedPrompt,
+                temperature: promptItem.llm.temperature,
+              }),
+            }).then(async (response) => {
+              const data = await response.json();
+              
+              if (!response.ok) {
+                throw new Error(data.error || 'Failed to get response');
               }
-              return undefined;
-            }, item as unknown);
-            processedPrompt = processedPrompt.replace(new RegExp(`{${variable}}`, 'g'), String(value || ''));
-          });
-        } else {
-          // Handle string inputs with {content} variable
-          processedPrompt = processedPrompt.replace(new RegExp(`{content}`, 'g'), String(item));
+
+              return {
+                inputIndex,
+                promptIndex,
+                result: data.result,
+                prompt: promptItem.prompt,
+                model: promptItem.llm.model
+              };
+            })
+          );
         }
-
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            apiKey,
-            model,
-            prompt: processedPrompt,
-            temperature,
-          }),
-        });
-
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to get response');
-        }
-
-        return data.result;
-      });
+      }
 
       const results = await Promise.all(promises);
-      setResults(results);
+      setResults(results.map(r => r.result)); // For now, just set simple results array
       setIsRunComplete(true);
     } catch (error) {
       alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -486,7 +594,7 @@ export default function Home() {
 
 				{/* Prompt Tab */}
 				{activeTab === "prompt" && (
-					<div className="max-w-6xl mx-auto">
+					<div className="max-w-4xl mx-auto">
 						{(availableVariables.length > 0 || inputType === 'string') ? (
 							<div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 								<div>
@@ -496,35 +604,21 @@ export default function Home() {
 									<div className="space-y-1 max-h-80 overflow-y-auto">
 										{inputType === 'string' ? (
 											<div>
-												<div className="flex items-center gap-2">
-													<button
-														onClick={handleContentClick}
-														className="text-left text-md text-gray-300 hover:text-white transition-colors font-mono"
-													>
-														+ content
-													</button>
-													<button
-														onClick={() => setShowContentHelp(!showContentHelp)}
-														className="w-4 h-4 rounded-full border border-gray-500 text-gray-500 hover:text-gray-300 hover:border-gray-300 flex items-center justify-center text-xs transition-colors cursor-pointer"
-													>
-														?
-													</button>
+												<button
+													onClick={() => setPrompt(prev => prev + '{content}')}
+													className="text-left text-md text-gray-300 hover:text-white transition-colors font-mono"
+												>
+													+ content
+												</button>
+												<div className="mt-2 mb-2 text-xs text-gray-500">
+													Each string input will be available as {'{content}'}
 												</div>
-												{showContentHelp && (
-													<div className="mt-2 mb-2 text-xs text-gray-500">
-														Each string input will be available as {`{content}`}
-													</div>
-												)}
 											</div>
 										) : (
 											availableVariables.map((variable) => (
 												<button
 													key={variable}
-													onClick={() =>
-														handleVariableClick(
-															variable
-														)
-													}
+													onClick={() => setPrompt(prev => prev + `{${variable}}`)}
 													className="block w-full text-left text-md text-gray-300 hover:text-white transition-colors font-mono"
 												>
 													+ {variable}
@@ -535,234 +629,392 @@ export default function Home() {
 								</div>
 
 								<div className="lg:col-span-3">
-									<div>
-										<label className="block text-sm font-medium text-gray-300 mb-3">
-											Prompt
-										</label>
+									{/* Prompt Input Section */}
+									<div className="border border-gray-800 rounded-lg bg-[#1e1e1e] p-3 flex flex-col">
+									<div className="flex-1">
 										<textarea
 											value={prompt}
-											onChange={(e) =>
-												setPrompt(e.target.value)
-											}
-											className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none h-80 resize-none text-white placeholder-gray-500 text-sm"
-											placeholder={
-												inputType === "string"
-													? "Enter your prompt here. Use {content} to insert each string from your input data."
-													: "Enter your prompt here. Use {variableName} to insert variables from your input data."
-											}
+											onChange={(e) => setPrompt(e.target.value)}
+											className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
+											placeholder="Enter your prompt here..."
 										/>
+									</div>
+									
+									{/* Model Settings Toggle and Add Button */}
+									<div className="flex justify-between items-center mt-2">
+										<button
+											onClick={() => setShowModelSettings(!showModelSettings)}
+											className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+										>
+											{showModelSettings ? 'Hide settings' : 'Show settings'} {showModelSettings ? '−' : '+'}
+										</button>
+										
+										<button
+											onClick={handleAddPrompt}
+											disabled={!prompt.trim()}
+											className="w-8 h-8 bg-white text-black rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed font-medium text-sm transition-all flex items-center justify-center"
+										>
+											+
+										</button>
+									</div>
+
+									{/* Collapsible Model Settings */}
+									{showModelSettings && (
+										<div className="mt-4 pt-4 border-t border-gray-800 grid grid-cols-1 md:grid-cols-3 gap-4">
+											<div>
+												<label className="block text-xs font-medium text-gray-400 mb-2">
+													API Key
+												</label>
+												<div className="relative">
+													<input
+														type={showApiKey ? "text" : "password"}
+														value={apiKey}
+														onChange={(e) => setApiKey(e.target.value)}
+														className="w-full px-3 py-2 pr-10 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
+														placeholder="sk-or-..."
+													/>
+													<button
+														type="button"
+														onClick={() => setShowApiKey(!showApiKey)}
+														className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-400"
+													>
+														{showApiKey ? (
+															<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+															</svg>
+														) : (
+															<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+															</svg>
+														)}
+													</button>
+												</div>
+											</div>
+
+											<div>
+												<label className="block text-xs font-medium text-gray-400 mb-2">
+													Model
+												</label>
+												{loadingModels ? (
+													<div className="w-full px-3 py-2 bg-gray-800 border border-gray-800 rounded-lg text-gray-500 text-sm">
+														Loading...
+													</div>
+												) : models.length > 0 ? (
+													<div className="relative">
+														<input
+															type="text"
+															value={modelSearch}
+															onChange={(e) => handleModelSearchChange(e.target.value)}
+															onFocus={() => setShowModelDropdown(true)}
+															onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
+															className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
+															placeholder="Search models..."
+														/>
+														{showModelDropdown && filteredModels.length > 0 && (
+															<div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+																{filteredModels.slice(0, 20).map((modelItem) => (
+																	<div
+																		key={modelItem.id}
+																		onClick={() => handleModelSelect(modelItem.id, modelItem.name)}
+																		className="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-800 last:border-b-0"
+																	>
+																		<div className="font-medium text-white text-sm">
+																			{modelItem.name}
+																		</div>
+																		<div className="text-xs text-gray-400">
+																			{modelItem.id}
+																		</div>
+																	</div>
+																))}
+															</div>
+														)}
+													</div>
+												) : (
+													<input
+														type="text"
+														value={model}
+														onChange={(e) => setModel(e.target.value)}
+														className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
+														placeholder="openai/gpt-4"
+													/>
+												)}
+											</div>
+
+											<div>
+												<label className="block text-xs font-medium text-gray-400 mb-2">
+													Temperature
+												</label>
+												<input
+													type="number"
+													min="0"
+													step="0.1"
+													value={temperature}
+													onChange={(e) => setTemperature(parseFloat(e.target.value) || 0)}
+													className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
+												/>
+											</div>
+										</div>
+									)}
 									</div>
 								</div>
 							</div>
 						) : (
-							<div>
-								<label className="block text-sm font-medium text-gray-300 mb-3">
-									Prompt Template
-								</label>
-								<textarea
-									value={prompt}
-									onChange={(e) => setPrompt(e.target.value)}
-									className="w-full px-4 py-3 bg-black border border-gray-800 rounded-lg focus:outline-none  h-80 resize-none text-white placeholder-gray-500 text-sm"
-									placeholder="Enter your prompt here. Add some input data first to see available variables."
-								/>
+							<div className="border border-gray-800 rounded-lg bg-[#1e1e1e] p-3 flex flex-col">
+								<div className="flex-1">
+									<textarea
+										value={prompt}
+										onChange={(e) => setPrompt(e.target.value)}
+										className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
+										placeholder="Enter your prompt here..."
+									/>
+								</div>
+								
+								{/* Model Settings Toggle and Add Button */}
+								<div className="flex justify-between items-center mt-2">
+									<button
+										onClick={() => setShowModelSettings(!showModelSettings)}
+										className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+									>
+										{showModelSettings ? 'Hide settings' : 'Show settings'} {showModelSettings ? '−' : '+'}
+									</button>
+									
+									<button
+										onClick={handleAddPrompt}
+										disabled={!prompt.trim()}
+										className="w-8 h-8 bg-white text-black rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed font-medium text-sm transition-all flex items-center justify-center"
+									>
+										+
+									</button>
+								</div>
+
+								{/* Collapsible Model Settings */}
+								{showModelSettings && (
+									<div className="mt-4 pt-4 border-t border-gray-800 grid grid-cols-1 md:grid-cols-3 gap-4">
+										<div>
+											<label className="block text-xs font-medium text-gray-400 mb-2">
+												API Key
+											</label>
+											<div className="relative">
+												<input
+													type={showApiKey ? "text" : "password"}
+													value={apiKey}
+													onChange={(e) => setApiKey(e.target.value)}
+													className="w-full px-3 py-2 pr-10 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
+													placeholder="sk-or-..."
+												/>
+												<button
+													type="button"
+													onClick={() => setShowApiKey(!showApiKey)}
+													className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-400"
+												>
+													{showApiKey ? (
+														<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+														</svg>
+													) : (
+														<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+														</svg>
+													)}
+												</button>
+											</div>
+										</div>
+
+										<div>
+											<label className="block text-xs font-medium text-gray-400 mb-2">
+												Model
+											</label>
+											{loadingModels ? (
+												<div className="w-full px-3 py-2 bg-gray-800 border border-gray-800 rounded-lg text-gray-500 text-sm">
+													Loading...
+												</div>
+											) : models.length > 0 ? (
+												<div className="relative">
+													<input
+														type="text"
+														value={modelSearch}
+														onChange={(e) => handleModelSearchChange(e.target.value)}
+														onFocus={() => setShowModelDropdown(true)}
+														onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
+														className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
+														placeholder="Search models..."
+													/>
+													{showModelDropdown && filteredModels.length > 0 && (
+														<div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+															{filteredModels.slice(0, 20).map((modelItem) => (
+																<div
+																	key={modelItem.id}
+																	onClick={() => handleModelSelect(modelItem.id, modelItem.name)}
+																	className="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-800 last:border-b-0"
+																>
+																	<div className="font-medium text-white text-sm">
+																		{modelItem.name}
+																	</div>
+																	<div className="text-xs text-gray-400">
+																		{modelItem.id}
+																	</div>
+																</div>
+															))}
+														</div>
+													)}
+												</div>
+											) : (
+												<input
+													type="text"
+													value={model}
+													onChange={(e) => setModel(e.target.value)}
+													className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
+													placeholder="openai/gpt-4"
+												/>
+											)}
+										</div>
+
+										<div>
+											<label className="block text-xs font-medium text-gray-400 mb-2">
+												Temperature
+											</label>
+											<input
+												type="number"
+												min="0"
+												step="0.1"
+												value={temperature}
+												onChange={(e) => setTemperature(parseFloat(e.target.value) || 0)}
+												className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
+											/>
+										</div>
+									</div>
+								)}
 							</div>
 						)}
 
-						{/* Run Configuration */}
-						<div className="mt-8">
-							<h3 className="text-sm font-medium text-gray-300 mb-6">
-								Configuration
-							</h3>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+						{/* Prompts List */}
+						<div className="mt-6">
+							{promptData.length > 0 ? (
 								<div>
-									<label className="block text-xs font-medium text-gray-400 mb-2">
-										API Key
-									</label>
-									<div className="relative">
-										<input
-											type={
-												showApiKey ? "text" : "password"
-											}
-											value={apiKey}
-											onChange={(e) =>
-												setApiKey(e.target.value)
-											}
-											className="w-full px-3 py-2 pr-10 bg-black border border-gray-800 rounded-lg focus:outline-none  text-white text-sm font-mono"
-											placeholder="sk-or-..."
-										/>
-										<button
-											type="button"
-											onClick={() =>
-												setShowApiKey(!showApiKey)
-											}
-											className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-400"
-										>
-											{showApiKey ? (
-												<svg
-													className="h-4 w-4"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke="currentColor"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-													/>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-													/>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M3 3l18 18"
-													/>
-												</svg>
-											) : (
-												<svg
-													className="h-4 w-4"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke="currentColor"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-													/>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-													/>
-												</svg>
-											)}
-										</button>
-									</div>
-								</div>
-
-								<div>
-									<label className="block text-xs font-medium text-gray-400 mb-2">
-										Model
-									</label>
-									{loadingModels ? (
-										<div className="w-full px-3 py-2 bg-gray-800 border border-gray-800 rounded-lg text-gray-500 text-sm">
-											Loading...
-										</div>
-									) : models.length > 0 ? (
-										<div className="relative">
-											<input
-												type="text"
-												value={modelSearch}
-												onChange={(e) =>
-													handleModelSearchChange(
-														e.target.value
-													)
-												}
-												onFocus={() =>
-													setShowModelDropdown(true)
-												}
-												onBlur={() =>
-													setTimeout(
-														() =>
-															setShowModelDropdown(
-																false
-															),
-														200
-													)
-												}
-												className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none  text-white text-sm"
-												placeholder="Search models..."
-											/>
-											{showModelDropdown &&
-												filteredModels.length > 0 && (
-													<div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-														{filteredModels
-															.slice(0, 20)
-															.map(
-																(modelItem) => (
-																	<div
-																		key={
-																			modelItem.id
-																		}
-																		onClick={() =>
-																			handleModelSelect(
-																				modelItem.id,
-																				modelItem.name
-																			)
-																		}
-																		className="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-800 last:border-b-0"
-																	>
-																		<div className="font-medium text-white text-sm">
-																			{
-																				modelItem.name
-																			}
-																		</div>
-																		<div className="text-xs text-gray-400">
-																			{
-																				modelItem.id
-																			}
-																		</div>
-																	</div>
-																)
-															)}
-													</div>
+									<div className="flex items-center justify-between mb-4">
+										<div className="flex items-center gap-2">
+											<h3 className="text-sm font-medium text-gray-300">
+												Current Prompts ({promptData.length} items)
+											</h3>
+											<button
+												onClick={() => setShowCurrentPrompts(!showCurrentPrompts)}
+												className="text-gray-500 hover:text-gray-400 transition-colors"
+											>
+												{showCurrentPrompts ? (
+													<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+													</svg>
+												) : (
+													<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+													</svg>
 												)}
+											</button>
 										</div>
-									) : (
-										<input
-											type="text"
-											value={model}
-											onChange={(e) =>
-												setModel(e.target.value)
-											}
-											className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none  text-white text-sm font-mono"
-											placeholder="openai/gpt-4"
-										/>
+										<div className="flex items-center gap-3">
+											<button
+												onClick={() => {
+													setExpandAllPrompts(!expandAllPrompts);
+													if (expandAllPrompts) {
+														setExpandedPrompt(null);
+													} else {
+														promptData.forEach((_, index) => {
+															setExpandedPrompt(index);
+														});
+													}
+												}}
+												className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+											>
+												{expandAllPrompts ? 'Collapse All' : 'Expand All'}
+											</button>
+											<button
+												onClick={() => setPromptData([])}
+												className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+											>
+												Clear All
+											</button>
+										</div>
+									</div>
+									{showCurrentPrompts && (
+										<div className="space-y-3">
+											{promptData.map((item, index) => (
+												<PromptItem
+													key={index}
+													item={item}
+													index={index}
+													isExpanded={expandedPrompt === index || expandAllPrompts}
+													onEdit={(value) => handleEditPrompt(index, value)}
+													onBlur={(value) => handlePromptBlur(index, value)}
+													onRemove={() => handleRemovePrompt(index)}
+												/>
+											))}
+										</div>
 									)}
 								</div>
-
-								<div>
-									<label className="block text-xs font-medium text-gray-400 mb-2">
-										Temperature
-									</label>
-									<input
-										type="number"
-										min="0"
-										max="2"
-										step="0.1"
-										value={temperature}
-										onChange={(e) =>
-											setTemperature(
-												parseFloat(e.target.value)
-											)
+							) : (
+								<PreviewContainer
+									items={[
+										{
+											prompt: "Summarize this content in 3 bullet points",
+											llm: {
+												model: "openai/gpt-4",
+												temperature: 0.7
+											}
+										},
+										{
+											prompt: "Translate the following to Spanish",
+											llm: {
+												model: "anthropic/claude-3-sonnet",
+												temperature: 0.3
+											}
+										},
+										{
+											prompt: "Extract the key themes from this text",
+											llm: {
+												model: "openai/gpt-3.5-turbo",
+												temperature: 0.5
+											}
+										},
+										{
+											prompt: "Write a professional email response to this message",
+											llm: {
+												model: "anthropic/claude-3-haiku",
+												temperature: 0.8
+											}
+										},
+										{
+											prompt: "Identify any potential issues or concerns in this content",
+											llm: {
+												model: "openai/gpt-4-turbo",
+												temperature: 0.2
+											}
 										}
-										className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none  text-white text-sm"
-									/>
-								</div>
-							</div>
-
-							<button
-								onClick={handleRun}
-								disabled={
-									loading ||
-									!apiKey ||
-									!model ||
-									!prompt ||
-									inputData.length === 0
-								}
-								className="w-full bg-white text-black px-6 py-3 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed font-medium text-sm transition-all"
-							>
-								{loading ? "Processing..." : "Run Batch"}
-							</button>
+									]}
+								/>
+							)}
 						</div>
+
+						{/* Run Button */}
+						{promptData.length > 0 && (
+							<div className="mt-6">
+								<button
+									onClick={handleRun}
+									disabled={loading || !apiKey || inputData.length === 0}
+									className="w-full bg-white text-black px-6 py-3 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed font-medium text-sm transition-all"
+								>
+									{loading ? "Processing..." : `Run Batch (${promptData.length} prompts × ${inputData.length} inputs)`}
+								</button>
+							</div>
+						)}
 					</div>
 				)}
 
