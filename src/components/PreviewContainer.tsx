@@ -10,7 +10,7 @@ export const PreviewContainer: React.FC<PreviewContainerProps> = ({
   return (
     <div>
       <div className="mb-4 flex justify-center">
-        <h3 className="text-sm font-medium opacity-90">
+        <h3 className="text-sm font-medium opacity-50">
           Preview - When you add inputs, it will display like this:
         </h3>
       </div>
@@ -31,7 +31,7 @@ export const PreviewContainer: React.FC<PreviewContainerProps> = ({
         {/* Smooth fade gradient overlay */}
         <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none" 
              style={{
-               background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.2) 25%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.5) 75%, rgba(0,0,0,0.7) 100%)'
+               background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.65) 25%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.8) 75%, rgba(0,0,0,0.8) 100%)'
              }} />
       </div>
     </div>

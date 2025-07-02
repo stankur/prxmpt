@@ -5,6 +5,8 @@ import Editor from '@monaco-editor/react';
 import { PreviewContainer } from '../components/PreviewContainer';
 import { InputItem } from '../components/InputItem';
 import { PromptItem } from '../components/PromptItem';
+import { VariablesSidebar } from '../components/VariablesSidebar';
+import { PromptInput } from '../components/PromptInput';
 
 // Cast to fix React 19 JSX.Element vs ReactNode compatibility
 const MonacoEditor = Editor as unknown as React.FC<{
@@ -410,7 +412,7 @@ export default function Home() {
 				<div className="flex items-center space-x-4 mb-8 justify-center">
 					<button
 						onClick={() => setActiveTab("input")}
-						className={`text-sm font-medium transition-all ${
+						className={`text-sm cursor-pointer font-medium transition-all ${
 							activeTab === "input"
 								? "text-white"
 								: "text-gray-500 hover:text-gray-400"
@@ -418,10 +420,10 @@ export default function Home() {
 					>
 						Inputs
 					</button>
-					<span className="text-gray-600 text-sm">×</span>
+					<span className="text-gray-600 text-xl">×</span>
 					<button
 						onClick={() => setActiveTab("prompt")}
-						className={`text-sm font-medium transition-all ${
+						className={`text-sm cursor-pointer font-medium transition-all ${
 							activeTab === "prompt"
 								? "text-white"
 								: "text-gray-500 hover:text-gray-400"
@@ -429,10 +431,10 @@ export default function Home() {
 					>
 						Prompts
 					</button>
-					<span className="text-gray-600 text-sm">=</span>
+					<span className="text-gray-600 text-xl">=</span>
 					<button
 						onClick={() => setActiveTab("output")}
-						className={`text-sm font-medium transition-all ${
+						className={`text-sm cursor-pointer font-medium transition-all ${
 							activeTab === "output"
 								? "text-white"
 								: "text-gray-500 hover:text-gray-400"
@@ -525,10 +527,16 @@ export default function Home() {
 									</h3>
 									<div className="flex items-center gap-3">
 										<button
-											onClick={() => setExpandAllInputs(!expandAllInputs)}
+											onClick={() =>
+												setExpandAllInputs(
+													!expandAllInputs
+												)
+											}
 											className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
 										>
-											{expandAllInputs ? 'Collapse All' : 'Expand All'}
+											{expandAllInputs
+												? "Collapse All"
+												: "Expand All"}
 										</button>
 										<button
 											onClick={() => {
@@ -547,10 +555,23 @@ export default function Home() {
 											key={index}
 											item={item}
 											index={index}
-											isExpanded={expandAllInputs || expandedInput === index}
-											onEdit={(value) => handleEditInput(index, value)}
-											onRemove={() => handleRemoveInput(index)}
-											onToggleExpand={() => setExpandedInput(expandedInput === index ? null : index)}
+											isExpanded={
+												expandAllInputs ||
+												expandedInput === index
+											}
+											onEdit={(value) =>
+												handleEditInput(index, value)
+											}
+											onRemove={() =>
+												handleRemoveInput(index)
+											}
+											onToggleExpand={() =>
+												setExpandedInput(
+													expandedInput === index
+														? null
+														: index
+												)
+											}
 										/>
 									))}
 								</div>
@@ -561,30 +582,38 @@ export default function Home() {
 									{
 										date: "2024-03-15",
 										title: "How to Build React Apps in 2024",
-										description: "Complete tutorial covering modern React development with hooks, state management, and best practices.",
+										description:
+											"Complete tutorial covering modern React development with hooks, state management, and best practices.",
 										account: "TechChannel",
-										transcript: "Welcome to this comprehensive React tutorial. Today we'll cover everything you need to know about building modern React applications. We'll start with the basics of components and hooks, then move on to advanced state management patterns. First, let's talk about functional components..."
+										transcript:
+											"Welcome to this comprehensive React tutorial. Today we'll cover everything you need to know about building modern React applications. We'll start with the basics of components and hooks, then move on to advanced state management patterns. First, let's talk about functional components...",
 									},
 									{
-										date: "2024-03-14", 
+										date: "2024-03-14",
 										title: "JavaScript ES6+ Features You Must Know",
-										description: "Essential modern JavaScript features that every developer should master in 2024.",
+										description:
+											"Essential modern JavaScript features that every developer should master in 2024.",
 										account: "CodeMaster",
-										transcript: "In this video, we'll explore the most important ES6 and beyond features that have revolutionized JavaScript development. Arrow functions, destructuring, template literals, and async/await are just the beginning..."
+										transcript:
+											"In this video, we'll explore the most important ES6 and beyond features that have revolutionized JavaScript development. Arrow functions, destructuring, template literals, and async/await are just the beginning...",
 									},
 									{
 										date: "2024-03-13",
 										title: "CSS Grid vs Flexbox - When to Use Which",
-										description: "A detailed comparison of CSS Grid and Flexbox with practical examples and use cases.",
+										description:
+											"A detailed comparison of CSS Grid and Flexbox with practical examples and use cases.",
 										account: "WebDesignPro",
-										transcript: "CSS layout has evolved tremendously over the years. Today we have powerful tools like CSS Grid and Flexbox. But when should you use each one? In this tutorial, we'll break down the differences..."
+										transcript:
+											"CSS layout has evolved tremendously over the years. Today we have powerful tools like CSS Grid and Flexbox. But when should you use each one? In this tutorial, we'll break down the differences...",
 									},
 									{
 										date: "2024-03-12",
 										title: "Node.js Performance Optimization Tips",
-										description: "Learn how to optimize your Node.js applications for better performance and scalability.",
+										description:
+											"Learn how to optimize your Node.js applications for better performance and scalability.",
 										account: "BackendExpert",
-										transcript: "Performance is crucial for Node.js applications. In this comprehensive guide, we'll explore various optimization techniques including memory management, event loop optimization, clustering, and caching strategies..."
+										transcript:
+											"Performance is crucial for Node.js applications. In this comprehensive guide, we'll explore various optimization techniques including memory management, event loop optimization, clustering, and caching strategies...",
 									},
 								]}
 							/>
@@ -595,60 +624,343 @@ export default function Home() {
 				{/* Prompt Tab */}
 				{activeTab === "prompt" && (
 					<div className="max-w-4xl mx-auto">
-						{(availableVariables.length > 0 || inputType === 'string') ? (
-							<div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-								<div>
-									<h3 className="text-sm font-medium text-gray-300 mb-4">
-										Variables
-									</h3>
-									<div className="space-y-1 max-h-80 overflow-y-auto">
-										{inputType === 'string' ? (
-											<div>
+						{availableVariables.length > 0 ||
+						inputType === "string" ? (
+							<div
+								className={`grid gap-6 ${
+									showVariablesSidebar
+										? "grid-cols-1 lg:grid-cols-4"
+										: "grid-cols-1"
+								}`}
+							>
+								<VariablesSidebar
+									availableVariables={availableVariables}
+									inputType={inputType}
+									isVisible={showVariablesSidebar}
+									onVariableClick={(variable) =>
+										setPrompt((prev) => prev + variable)
+									}
+								/>
+
+								<div
+									className={
+										showVariablesSidebar
+											? "lg:col-span-3"
+											: "col-span-1"
+									}
+								>
+									<div className="mb-3">
+										<label className="text-sm font-medium text-gray-300">
+											Prompt
+										</label>
+									</div>
+									{/* Prompt Input Section */}
+									<div className="border border-gray-800 rounded-lg bg-[#1e1e1e] p-3 flex flex-col">
+										<div className="flex-1">
+											<textarea
+												value={prompt}
+												onChange={(e) =>
+													setPrompt(e.target.value)
+												}
+												className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
+												placeholder="Enter your prompt here..."
+											/>
+										</div>
+
+										{/* Model Settings Toggle and Add Button */}
+										<div className="flex justify-between items-center mt-2">
+											<div className="flex items-center gap-3">
 												<button
-													onClick={() => setPrompt(prev => prev + '{content}')}
-													className="text-left text-md text-gray-300 hover:text-white transition-colors font-mono"
+													onClick={() =>
+														setShowModelSettings(
+															!showModelSettings
+														)
+													}
+													className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
 												>
-													+ content
+													{showModelSettings
+														? "Hide LLM settings"
+														: "Show LLM settings"}{" "}
+													{showModelSettings
+														? "−"
+														: "+"}
 												</button>
-												<div className="mt-2 mb-2 text-xs text-gray-500">
-													Each string input will be available as {'{content}'}
+												{(availableVariables.length >
+													0 ||
+													inputType === "string") && (
+													<button
+														onClick={() =>
+															setShowVariablesSidebar(
+																!showVariablesSidebar
+															)
+														}
+														className="text-xs cursor-pointer text-gray-400 hover:text-gray-300 transition-colors"
+													>
+														{showVariablesSidebar
+															? "Hide variables −"
+															: "Show variables +"}
+													</button>
+												)}
+											</div>
+
+											<button
+												onClick={handleAddPrompt}
+												disabled={!prompt.trim()}
+												className="w-8 h-8 bg-white text-black rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed font-medium text-sm transition-all flex items-center justify-center"
+											>
+												+
+											</button>
+										</div>
+
+										{/* Collapsible Model Settings */}
+										{showModelSettings && (
+											<div className="mt-4 pt-4 border-t border-gray-800 grid grid-cols-1 md:grid-cols-3 gap-4">
+												<div>
+													<label className="block text-xs font-medium text-gray-400 mb-2">
+														API Key
+													</label>
+													<div className="relative">
+														<input
+															type={
+																showApiKey
+																	? "text"
+																	: "password"
+															}
+															value={apiKey}
+															onChange={(e) =>
+																setApiKey(
+																	e.target
+																		.value
+																)
+															}
+															className="w-full px-3 py-2 pr-10 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
+															placeholder="sk-or-..."
+														/>
+														<button
+															type="button"
+															onClick={() =>
+																setShowApiKey(
+																	!showApiKey
+																)
+															}
+															className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-400"
+														>
+															{showApiKey ? (
+																<svg
+																	className="h-4 w-4"
+																	fill="none"
+																	viewBox="0 0 24 24"
+																	stroke="currentColor"
+																>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		strokeWidth={
+																			2
+																		}
+																		d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+																	/>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		strokeWidth={
+																			2
+																		}
+																		d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+																	/>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		strokeWidth={
+																			2
+																		}
+																		d="M3 3l18 18"
+																	/>
+																</svg>
+															) : (
+																<svg
+																	className="h-4 w-4"
+																	fill="none"
+																	viewBox="0 0 24 24"
+																	stroke="currentColor"
+																>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		strokeWidth={
+																			2
+																		}
+																		d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+																	/>
+																	<path
+																		strokeLinecap="round"
+																		strokeLinejoin="round"
+																		strokeWidth={
+																			2
+																		}
+																		d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+																	/>
+																</svg>
+															)}
+														</button>
+													</div>
+												</div>
+
+												<div>
+													<label className="block text-xs font-medium text-gray-400 mb-2">
+														Model
+													</label>
+													{loadingModels ? (
+														<div className="w-full px-3 py-2 bg-gray-800 border border-gray-800 rounded-lg text-gray-500 text-sm">
+															Loading...
+														</div>
+													) : models.length > 0 ? (
+														<div className="relative">
+															<input
+																type="text"
+																value={
+																	modelSearch
+																}
+																onChange={(e) =>
+																	handleModelSearchChange(
+																		e.target
+																			.value
+																	)
+																}
+																onFocus={() =>
+																	setShowModelDropdown(
+																		true
+																	)
+																}
+																onBlur={() =>
+																	setTimeout(
+																		() =>
+																			setShowModelDropdown(
+																				false
+																			),
+																		200
+																	)
+																}
+																className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
+																placeholder="Search models..."
+															/>
+															{showModelDropdown &&
+																filteredModels.length >
+																	0 && (
+																	<div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+																		{filteredModels
+																			.slice(
+																				0,
+																				20
+																			)
+																			.map(
+																				(
+																					modelItem
+																				) => (
+																					<div
+																						key={
+																							modelItem.id
+																						}
+																						onClick={() =>
+																							handleModelSelect(
+																								modelItem.id,
+																								modelItem.name
+																							)
+																						}
+																						className="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-800 last:border-b-0"
+																					>
+																						<div className="font-medium text-white text-sm">
+																							{
+																								modelItem.name
+																							}
+																						</div>
+																						<div className="text-xs text-gray-400">
+																							{
+																								modelItem.id
+																							}
+																						</div>
+																					</div>
+																				)
+																			)}
+																	</div>
+																)}
+														</div>
+													) : (
+														<input
+															type="text"
+															value={model}
+															onChange={(e) =>
+																setModel(
+																	e.target
+																		.value
+																)
+															}
+															className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
+															placeholder="openai/gpt-4"
+														/>
+													)}
+												</div>
+
+												<div>
+													<label className="block text-xs font-medium text-gray-400 mb-2">
+														Temperature
+													</label>
+													<input
+														type="number"
+														min="0"
+														step="0.1"
+														value={temperature}
+														onChange={(e) =>
+															setTemperature(
+																parseFloat(
+																	e.target
+																		.value
+																) || 0
+															)
+														}
+														className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
+													/>
 												</div>
 											</div>
-										) : (
-											availableVariables.map((variable) => (
-												<button
-													key={variable}
-													onClick={() => setPrompt(prev => prev + `{${variable}}`)}
-													className="block w-full text-left text-md text-gray-300 hover:text-white transition-colors font-mono"
-												>
-													+ {variable}
-												</button>
-											))
 										)}
 									</div>
 								</div>
-
-								<div className="lg:col-span-3">
-									{/* Prompt Input Section */}
-									<div className="border border-gray-800 rounded-lg bg-[#1e1e1e] p-3 flex flex-col">
+							</div>
+						) : (
+							<div>
+								<div className="mb-3">
+									<label className="text-sm font-medium text-gray-300">
+										Prompt
+									</label>
+								</div>
+								<div className="border border-gray-800 rounded-lg bg-[#1e1e1e] p-3 flex flex-col">
 									<div className="flex-1">
 										<textarea
 											value={prompt}
-											onChange={(e) => setPrompt(e.target.value)}
+											onChange={(e) =>
+												setPrompt(e.target.value)
+											}
 											className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
 											placeholder="Enter your prompt here..."
 										/>
 									</div>
-									
+
 									{/* Model Settings Toggle and Add Button */}
 									<div className="flex justify-between items-center mt-2">
 										<button
-											onClick={() => setShowModelSettings(!showModelSettings)}
-											className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+											onClick={() =>
+												setShowModelSettings(
+													!showModelSettings
+												)
+											}
+											className="text-xs text-gray-400 cursor-pointer hover:text-gray-300 transition-colors"
 										>
-											{showModelSettings ? 'Hide settings' : 'Show settings'} {showModelSettings ? '−' : '+'}
+											{showModelSettings
+												? "Hide LLM settings"
+												: "Show LLM settings"}{" "}
+											{showModelSettings ? "−" : "+"}
 										</button>
-										
+
 										<button
 											onClick={handleAddPrompt}
 											disabled={!prompt.trim()}
@@ -667,27 +979,84 @@ export default function Home() {
 												</label>
 												<div className="relative">
 													<input
-														type={showApiKey ? "text" : "password"}
+														type={
+															showApiKey
+																? "text"
+																: "password"
+														}
 														value={apiKey}
-														onChange={(e) => setApiKey(e.target.value)}
+														onChange={(e) =>
+															setApiKey(
+																e.target.value
+															)
+														}
 														className="w-full px-3 py-2 pr-10 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
 														placeholder="sk-or-..."
 													/>
 													<button
 														type="button"
-														onClick={() => setShowApiKey(!showApiKey)}
+														onClick={() =>
+															setShowApiKey(
+																!showApiKey
+															)
+														}
 														className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-400"
 													>
 														{showApiKey ? (
-															<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+															<svg
+																className="h-4 w-4"
+																fill="none"
+																viewBox="0 0 24 24"
+																stroke="currentColor"
+															>
+																<path
+																	strokeLinecap="round"
+																	strokeLinejoin="round"
+																	strokeWidth={
+																		2
+																	}
+																	d="M15 12a3 3 0 11-6 0 3 3 0 616 0z"
+																/>
+																<path
+																	strokeLinecap="round"
+																	strokeLinejoin="round"
+																	strokeWidth={
+																		2
+																	}
+																	d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+																/>
+																<path
+																	strokeLinecap="round"
+																	strokeLinejoin="round"
+																	strokeWidth={
+																		2
+																	}
+																	d="M3 3l18 18"
+																/>
 															</svg>
 														) : (
-															<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+															<svg
+																className="h-4 w-4"
+																fill="none"
+																viewBox="0 0 24 24"
+																stroke="currentColor"
+															>
+																<path
+																	strokeLinecap="round"
+																	strokeLinejoin="round"
+																	strokeWidth={
+																		2
+																	}
+																	d="M15 12a3 3 0 11-6 0 3 3 0 616 0z"
+																/>
+																<path
+																	strokeLinecap="round"
+																	strokeLinejoin="round"
+																	strokeWidth={
+																		2
+																	}
+																	d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+																/>
 															</svg>
 														)}
 													</button>
@@ -707,36 +1076,79 @@ export default function Home() {
 														<input
 															type="text"
 															value={modelSearch}
-															onChange={(e) => handleModelSearchChange(e.target.value)}
-															onFocus={() => setShowModelDropdown(true)}
-															onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
+															onChange={(e) =>
+																handleModelSearchChange(
+																	e.target
+																		.value
+																)
+															}
+															onFocus={() =>
+																setShowModelDropdown(
+																	true
+																)
+															}
+															onBlur={() =>
+																setTimeout(
+																	() =>
+																		setShowModelDropdown(
+																			false
+																		),
+																	200
+																)
+															}
 															className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
 															placeholder="Search models..."
 														/>
-														{showModelDropdown && filteredModels.length > 0 && (
-															<div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-																{filteredModels.slice(0, 20).map((modelItem) => (
-																	<div
-																		key={modelItem.id}
-																		onClick={() => handleModelSelect(modelItem.id, modelItem.name)}
-																		className="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-800 last:border-b-0"
-																	>
-																		<div className="font-medium text-white text-sm">
-																			{modelItem.name}
-																		</div>
-																		<div className="text-xs text-gray-400">
-																			{modelItem.id}
-																		</div>
-																	</div>
-																))}
-															</div>
-														)}
+														{showModelDropdown &&
+															filteredModels.length >
+																0 && (
+																<div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+																	{filteredModels
+																		.slice(
+																			0,
+																			20
+																		)
+																		.map(
+																			(
+																				modelItem
+																			) => (
+																				<div
+																					key={
+																						modelItem.id
+																					}
+																					onClick={() =>
+																						handleModelSelect(
+																							modelItem.id,
+																							modelItem.name
+																						)
+																					}
+																					className="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-800 last:border-b-0"
+																				>
+																					<div className="font-medium text-white text-sm">
+																						{
+																							modelItem.name
+																						}
+																					</div>
+																					<div className="text-xs text-gray-400">
+																						{
+																							modelItem.id
+																						}
+																					</div>
+																				</div>
+																			)
+																		)}
+																</div>
+															)}
 													</div>
 												) : (
 													<input
 														type="text"
 														value={model}
-														onChange={(e) => setModel(e.target.value)}
+														onChange={(e) =>
+															setModel(
+																e.target.value
+															)
+														}
 														className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
 														placeholder="openai/gpt-4"
 													/>
@@ -752,144 +1164,19 @@ export default function Home() {
 													min="0"
 													step="0.1"
 													value={temperature}
-													onChange={(e) => setTemperature(parseFloat(e.target.value) || 0)}
+													onChange={(e) =>
+														setTemperature(
+															parseFloat(
+																e.target.value
+															) || 0
+														)
+													}
 													className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
 												/>
 											</div>
 										</div>
 									)}
-									</div>
 								</div>
-							</div>
-						) : (
-							<div className="border border-gray-800 rounded-lg bg-[#1e1e1e] p-3 flex flex-col">
-								<div className="flex-1">
-									<textarea
-										value={prompt}
-										onChange={(e) => setPrompt(e.target.value)}
-										className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
-										placeholder="Enter your prompt here..."
-									/>
-								</div>
-								
-								{/* Model Settings Toggle and Add Button */}
-								<div className="flex justify-between items-center mt-2">
-									<button
-										onClick={() => setShowModelSettings(!showModelSettings)}
-										className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
-									>
-										{showModelSettings ? 'Hide settings' : 'Show settings'} {showModelSettings ? '−' : '+'}
-									</button>
-									
-									<button
-										onClick={handleAddPrompt}
-										disabled={!prompt.trim()}
-										className="w-8 h-8 bg-white text-black rounded-full hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed font-medium text-sm transition-all flex items-center justify-center"
-									>
-										+
-									</button>
-								</div>
-
-								{/* Collapsible Model Settings */}
-								{showModelSettings && (
-									<div className="mt-4 pt-4 border-t border-gray-800 grid grid-cols-1 md:grid-cols-3 gap-4">
-										<div>
-											<label className="block text-xs font-medium text-gray-400 mb-2">
-												API Key
-											</label>
-											<div className="relative">
-												<input
-													type={showApiKey ? "text" : "password"}
-													value={apiKey}
-													onChange={(e) => setApiKey(e.target.value)}
-													className="w-full px-3 py-2 pr-10 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
-													placeholder="sk-or-..."
-												/>
-												<button
-													type="button"
-													onClick={() => setShowApiKey(!showApiKey)}
-													className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-400"
-												>
-													{showApiKey ? (
-														<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
-														</svg>
-													) : (
-														<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-														</svg>
-													)}
-												</button>
-											</div>
-										</div>
-
-										<div>
-											<label className="block text-xs font-medium text-gray-400 mb-2">
-												Model
-											</label>
-											{loadingModels ? (
-												<div className="w-full px-3 py-2 bg-gray-800 border border-gray-800 rounded-lg text-gray-500 text-sm">
-													Loading...
-												</div>
-											) : models.length > 0 ? (
-												<div className="relative">
-													<input
-														type="text"
-														value={modelSearch}
-														onChange={(e) => handleModelSearchChange(e.target.value)}
-														onFocus={() => setShowModelDropdown(true)}
-														onBlur={() => setTimeout(() => setShowModelDropdown(false), 200)}
-														className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
-														placeholder="Search models..."
-													/>
-													{showModelDropdown && filteredModels.length > 0 && (
-														<div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-															{filteredModels.slice(0, 20).map((modelItem) => (
-																<div
-																	key={modelItem.id}
-																	onClick={() => handleModelSelect(modelItem.id, modelItem.name)}
-																	className="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-800 last:border-b-0"
-																>
-																	<div className="font-medium text-white text-sm">
-																		{modelItem.name}
-																	</div>
-																	<div className="text-xs text-gray-400">
-																		{modelItem.id}
-																	</div>
-																</div>
-															))}
-														</div>
-													)}
-												</div>
-											) : (
-												<input
-													type="text"
-													value={model}
-													onChange={(e) => setModel(e.target.value)}
-													className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm font-mono"
-													placeholder="openai/gpt-4"
-												/>
-											)}
-										</div>
-
-										<div>
-											<label className="block text-xs font-medium text-gray-400 mb-2">
-												Temperature
-											</label>
-											<input
-												type="number"
-												min="0"
-												step="0.1"
-												value={temperature}
-												onChange={(e) => setTemperature(parseFloat(e.target.value) || 0)}
-												className="w-full px-3 py-2 bg-black border border-gray-800 rounded-lg focus:outline-none text-white text-sm"
-											/>
-										</div>
-									</div>
-								)}
 							</div>
 						)}
 
@@ -900,22 +1187,62 @@ export default function Home() {
 									<div className="flex items-center justify-between mb-4">
 										<div className="flex items-center gap-2">
 											<h3 className="text-sm font-medium text-gray-300">
-												Current Prompts ({promptData.length} items)
+												Current Prompts (
+												{promptData.length} items)
 											</h3>
 											<button
-												onClick={() => setShowCurrentPrompts(!showCurrentPrompts)}
+												onClick={() =>
+													setShowCurrentPrompts(
+														!showCurrentPrompts
+													)
+												}
 												className="text-gray-500 hover:text-gray-400 transition-colors"
 											>
 												{showCurrentPrompts ? (
-													<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+													<svg
+														className="h-4 w-4"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+														/>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+														/>
 													</svg>
 												) : (
-													<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+													<svg
+														className="h-4 w-4"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+														/>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+														/>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M3 3l18 18"
+														/>
 													</svg>
 												)}
 											</button>
@@ -923,21 +1250,31 @@ export default function Home() {
 										<div className="flex items-center gap-3">
 											<button
 												onClick={() => {
-													setExpandAllPrompts(!expandAllPrompts);
+													setExpandAllPrompts(
+														!expandAllPrompts
+													);
 													if (expandAllPrompts) {
 														setExpandedPrompt(null);
 													} else {
-														promptData.forEach((_, index) => {
-															setExpandedPrompt(index);
-														});
+														promptData.forEach(
+															(_, index) => {
+																setExpandedPrompt(
+																	index
+																);
+															}
+														);
 													}
 												}}
 												className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
 											>
-												{expandAllPrompts ? 'Collapse All' : 'Expand All'}
+												{expandAllPrompts
+													? "Collapse All"
+													: "Expand All"}
 											</button>
 											<button
-												onClick={() => setPromptData([])}
+												onClick={() =>
+													setPromptData([])
+												}
 												className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
 											>
 												Clear All
@@ -951,10 +1288,28 @@ export default function Home() {
 													key={index}
 													item={item}
 													index={index}
-													isExpanded={expandedPrompt === index || expandAllPrompts}
-													onEdit={(value) => handleEditPrompt(index, value)}
-													onBlur={(value) => handlePromptBlur(index, value)}
-													onRemove={() => handleRemovePrompt(index)}
+													isExpanded={
+														expandedPrompt ===
+															index ||
+														expandAllPrompts
+													}
+													onEdit={(value) =>
+														handleEditPrompt(
+															index,
+															value
+														)
+													}
+													onBlur={(value) =>
+														handlePromptBlur(
+															index,
+															value
+														)
+													}
+													onRemove={() =>
+														handleRemovePrompt(
+															index
+														)
+													}
 												/>
 											))}
 										</div>
@@ -967,37 +1322,37 @@ export default function Home() {
 											prompt: "Summarize this content in 3 bullet points",
 											llm: {
 												model: "openai/gpt-4",
-												temperature: 0.7
-											}
+												temperature: 0.7,
+											},
 										},
 										{
 											prompt: "Translate the following to Spanish",
 											llm: {
 												model: "anthropic/claude-3-sonnet",
-												temperature: 0.3
-											}
+												temperature: 0.3,
+											},
 										},
 										{
 											prompt: "Extract the key themes from this text",
 											llm: {
 												model: "openai/gpt-3.5-turbo",
-												temperature: 0.5
-											}
+												temperature: 0.5,
+											},
 										},
 										{
 											prompt: "Write a professional email response to this message",
 											llm: {
 												model: "anthropic/claude-3-haiku",
-												temperature: 0.8
-											}
+												temperature: 0.8,
+											},
 										},
 										{
 											prompt: "Identify any potential issues or concerns in this content",
 											llm: {
 												model: "openai/gpt-4-turbo",
-												temperature: 0.2
-											}
-										}
+												temperature: 0.2,
+											},
+										},
 									]}
 								/>
 							)}
@@ -1008,10 +1363,16 @@ export default function Home() {
 							<div className="mt-6">
 								<button
 									onClick={handleRun}
-									disabled={loading || !apiKey || inputData.length === 0}
+									disabled={
+										loading ||
+										!apiKey ||
+										inputData.length === 0
+									}
 									className="w-full bg-white text-black px-6 py-3 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed font-medium text-sm transition-all"
 								>
-									{loading ? "Processing..." : `Run Batch (${promptData.length} prompts × ${inputData.length} inputs)`}
+									{loading
+										? "Processing..."
+										: `Run Batch (${promptData.length} prompts × ${inputData.length} inputs)`}
 								</button>
 							</div>
 						)}
