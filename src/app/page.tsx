@@ -7,6 +7,7 @@ import { InputItem } from '../components/InputItem';
 import { PromptItem } from '../components/PromptItem';
 import { VariablesSidebar } from '../components/VariablesSidebar';
 import { ProcessingAnimation } from '../components/ProcessingAnimation';
+import { OutputsTab } from '../components/OutputsTab';
 // import { PromptInput } from '../components/PromptInput';
 
 // Cast to fix React 19 JSX.Element vs ReactNode compatibility
@@ -63,7 +64,7 @@ export default function Home() {
   const [filteredModels, setFilteredModels] = useState<Model[]>([]);
   
   // Output data
-  const [results, setResults] = useState<string[]>([]);
+  const [results, setResults] = useState<Record<string, Array<{inputIndex: number, result: string}>>>({});
   const [loading, setLoading] = useState(false);
   const [isRunComplete, setIsRunComplete] = useState(false);
 
@@ -334,7 +335,7 @@ export default function Home() {
 
     setLoading(true);
     setIsRunComplete(false);
-    setResults([]);
+    setResults({});
     setActiveTab('output');
 
     try {
@@ -384,6 +385,7 @@ export default function Home() {
                 promptIndex,
                 result: data.result,
                 prompt: promptItem.prompt,
+                promptName: `Prompt ${promptIndex + 1}`,
                 model: promptItem.llm.model
               };
             })
@@ -391,8 +393,21 @@ export default function Home() {
         }
       }
 
-      const results = await Promise.all(promises);
-      setResults(results.map(r => r.result)); // For now, just set simple results array
+      const allResults = await Promise.all(promises);
+      
+      // Group results by prompt name
+      const groupedResults: Record<string, Array<{inputIndex: number, result: string}>> = {};
+      allResults.forEach(result => {
+        if (!groupedResults[result.promptName]) {
+          groupedResults[result.promptName] = [];
+        }
+        groupedResults[result.promptName].push({
+          inputIndex: result.inputIndex,
+          result: result.result
+        });
+      });
+      
+      setResults(groupedResults);
       setIsRunComplete(true);
     } catch (error) {
       alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1462,64 +1477,12 @@ export default function Home() {
 				{/* Output Tab */}
 				{activeTab === "output" && (
 					<div className="max-w-6xl mx-auto">
-						{loading && (
-							<div className="text-center py-16">
-								<div className="inline-flex items-center justify-center w-8 h-8 border-2 border-gray-600 border-t-white rounded-full animate-spin mb-4"></div>
-								<div className="text-gray-400">
-									Processing {inputData.length} items...
-								</div>
-							</div>
-						)}
-
-						{!loading && !isRunComplete && (
-							<div className="text-center py-16">
-								<div className="text-gray-500">
-									Add inputs and prompts first, then run to
-									see results
-								</div>
-							</div>
-						)}
-
-						{isRunComplete && results.length > 0 && (
-							<div className="space-y-4">
-								{inputData.map((input, index) => (
-									<div
-										key={index}
-										className="bg-gray-900 rounded-lg border border-gray-800 p-6"
-									>
-										<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-											<div>
-												<h4 className="text-xs font-medium text-gray-400 mb-3">
-													Input {index + 1}
-												</h4>
-												<div className="bg-black border border-gray-800 rounded-lg p-4">
-													<pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono">
-														{typeof input ===
-														"string"
-															? input
-															: JSON.stringify(
-																	input,
-																	null,
-																	2
-															  )}
-													</pre>
-												</div>
-											</div>
-											<div>
-												<h4 className="text-xs font-medium text-gray-400 mb-3">
-													Output {index + 1}
-												</h4>
-												<div className="bg-black border border-gray-800 rounded-lg p-4">
-													<pre className="text-xs text-white whitespace-pre-wrap">
-														{results[index]}
-													</pre>
-												</div>
-											</div>
-										</div>
-									</div>
-								))}
-							</div>
-						)}
+						<OutputsTab
+							loading={loading}
+							isRunComplete={isRunComplete}
+							results={results}
+							inputData={inputData}
+						/>
 					</div>
 				)}
 			</div>
