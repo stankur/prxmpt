@@ -72,6 +72,9 @@ export default function Home() {
   const [isAnimating, setIsAnimating] = useState(true);
   const [showAnimation, setShowAnimation] = useState(true);
 
+  // Zen mode
+  const [isPromptFocused, setIsPromptFocused] = useState(false);
+
   // Load saved API key from localStorage on component mount
   useEffect(() => {
     const savedApiKey = localStorage.getItem('openrouterApiKey');
@@ -417,9 +420,18 @@ export default function Home() {
   };
 
   return (
-		<div className="min-h-screen bg-black text-white">
+		<div 
+			className="min-h-screen bg-black text-white"
+			onClick={(e) => {
+				// Exit zen mode if clicking outside prompt workspace
+				const target = e.target as Element;
+				if (isPromptFocused && !target.closest('[data-prompt-workspace]')) {
+					setIsPromptFocused(false);
+				}
+			}}
+		>
 			<div className="max-w-7xl mx-auto p-6">
-				<div className="text-center mb-8">
+				<div className={`text-center mb-8 transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
 					<h1 className="text-2xl font-semibold text-white mb-2 tracking-wider">
 						<span className="font-bold">PRXMPT</span>
 					</h1>
@@ -430,7 +442,7 @@ export default function Home() {
 
 				{/* Processing Animation */}
 				{showAnimation && (
-					<div className="relative">
+					<div className={`relative transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
 						<ProcessingAnimation
 							inputCount={4}
 							promptCount={3}
@@ -500,7 +512,7 @@ export default function Home() {
 				)}
 
 				{!showAnimation && (
-					<div className="flex justify-center items-center py-4">
+					<div className={`flex justify-center items-center py-4 transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
 						<button
 							onClick={() => setShowAnimation(true)}
 							className="text-xs text-gray-500 hover:text-gray-400 transition-colors cursor-pointer"
@@ -511,7 +523,7 @@ export default function Home() {
 				)}
 
 				{/* Tab Navigation */}
-				<div className="flex items-center space-x-4 mb-8 justify-center">
+				<div className={`flex items-center space-x-4 mb-8 justify-center transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
 					<button
 						onClick={() => setActiveTab("input")}
 						className={`text-sm cursor-pointer font-medium transition-all ${
@@ -729,6 +741,7 @@ export default function Home() {
 						{availableVariables.length > 0 ||
 						inputType === "string" ? (
 							<div
+								data-prompt-workspace
 								className={`grid gap-6 ${
 									showVariablesSidebar
 										? "grid-cols-1 lg:grid-cols-4"
@@ -764,6 +777,7 @@ export default function Home() {
 												onChange={(e) =>
 													setPrompt(e.target.value)
 												}
+												onFocus={() => setIsPromptFocused(true)}
 												className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
 												placeholder="Enter your prompt here..."
 											/>
@@ -1029,7 +1043,7 @@ export default function Home() {
 								</div>
 							</div>
 						) : (
-							<div>
+							<div data-prompt-workspace>
 								<div className="mb-3">
 									<label className="text-sm font-medium text-gray-300">
 										Prompt
@@ -1042,6 +1056,7 @@ export default function Home() {
 											onChange={(e) =>
 												setPrompt(e.target.value)
 											}
+											onFocus={() => setIsPromptFocused(true)}
 											className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
 											placeholder="Enter your prompt here..."
 										/>
@@ -1283,7 +1298,7 @@ export default function Home() {
 						)}
 
 						{/* Prompts List */}
-						<div className="mt-6">
+						<div className={`mt-6 transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
 							{promptData.length > 0 ? (
 								<div>
 									<div className="flex items-center justify-between mb-4">
@@ -1455,7 +1470,7 @@ export default function Home() {
 
 						{/* Run Button */}
 						{promptData.length > 0 && (
-							<div className="mt-6 flex items-center justify-center gap-3">
+							<div className={`mt-6 flex items-center justify-center gap-3 transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
 								<span className="text-xs text-gray-400">
 									{loading
 										? "Processing..."

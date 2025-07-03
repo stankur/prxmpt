@@ -47,10 +47,9 @@ export function OutputsTab({ loading, isRunComplete, results, inputData }: Outpu
                 <div
                   key={index}
                   className="bg-black border border-gray-800 rounded-lg p-3"
-                  style={{ maxHeight: '80px', overflow: 'hidden' }}
                 >
-                  <textarea
-                    value={JSON.stringify(
+                  <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap">
+                    {JSON.stringify(
                       {
                         input: inputData[result.inputIndex],
                         output: result.result
@@ -58,11 +57,7 @@ export function OutputsTab({ loading, isRunComplete, results, inputData }: Outpu
                       null,
                       2
                     )}
-                    readOnly
-                    className="w-full bg-transparent text-xs text-gray-300 font-mono resize-none focus:outline-none"
-                    rows={4}
-                    style={{ overflow: 'hidden' }}
-                  />
+                  </pre>
                 </div>
               ))}
             </div>
