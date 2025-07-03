@@ -67,6 +67,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [isRunComplete, setIsRunComplete] = useState(false);
 
+  // Animation control
+  const [isAnimating, setIsAnimating] = useState(true);
+  const [showAnimation, setShowAnimation] = useState(true);
+
   // Load saved API key from localStorage on component mount
   useEffect(() => {
     const savedApiKey = localStorage.getItem('openrouterApiKey');
@@ -401,20 +405,95 @@ export default function Home() {
 		<div className="min-h-screen bg-black text-white">
 			<div className="max-w-7xl mx-auto p-6">
 				<div className="text-center mb-8">
-					<h1 className="text-2xl font-semibold text-white mb-2">
-						Batch Processor
+					<h1 className="text-2xl font-semibold text-white mb-2 tracking-wider">
+						<span className="font-bold">PRXMPT</span>
 					</h1>
 					<p className="text-sm text-gray-400">
-						Process multiple inputs through OpenRouter models
+						test prompts at scale in parallel
 					</p>
 				</div>
 
 				{/* Processing Animation */}
-				<ProcessingAnimation
-					inputCount={3}
-					promptCount={2}
-					isAnimating={true}
-				/>
+				{showAnimation && (
+					<div className="relative">
+						<ProcessingAnimation
+							inputCount={4}
+							promptCount={3}
+							isAnimating={isAnimating}
+						/>
+						<div className="flex justify-center items-center gap-2 mt-4 mb-6">
+							<button
+								onClick={() => setIsAnimating(!isAnimating)}
+								className="flex items-center justify-center w-8 h-8 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors"
+								title={
+									isAnimating
+										? "Pause animation"
+										: "Play animation"
+								}
+							>
+								{isAnimating ? (
+									<svg
+										className="w-4 h-4 text-white"
+										fill="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+									</svg>
+								) : (
+									<svg
+										className="w-4 h-4 text-white ml-0.5"
+										fill="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path d="M8 5v14l11-7z" />
+									</svg>
+								)}
+							</button>
+							<button
+								onClick={() => setShowAnimation(false)}
+								className="flex items-center justify-center w-8 h-8 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors"
+								title="Hide animation"
+							>
+								<svg
+									className="w-4 h-4 text-white"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M15 12a3 3 0 11-6 0 3 3 0 616 0z"
+									/>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+									/>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M3 3l18 18"
+									/>
+								</svg>
+							</button>
+						</div>
+					</div>
+				)}
+
+				{!showAnimation && (
+					<div className="flex justify-center items-center py-4">
+						<button
+							onClick={() => setShowAnimation(true)}
+							className="text-xs text-gray-500 hover:text-gray-400 transition-colors cursor-pointer"
+						>
+							show animation
+						</button>
+					</div>
+				)}
 
 				{/* Tab Navigation */}
 				<div className="flex items-center space-x-4 mb-8 justify-center">

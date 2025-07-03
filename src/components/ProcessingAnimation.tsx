@@ -20,6 +20,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
   const [activeBeams, setActiveBeams] = useState<Set<string>>(new Set());
   const inputRefs = useRef<(HTMLDivElement | null)[]>([]);
   const promptRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const timeoutIds = useRef<Set<NodeJS.Timeout>>(new Set());
 
   useEffect(() => {
     if (!isAnimating) return;
@@ -114,8 +115,27 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
     }, 100);
   }, [inputCount, promptCount, isAnimating]);
 
+  // Clear active beams when animation is paused
+  useEffect(() => {
+    if (!isAnimating) {
+      setActiveBeams(new Set());
+      // Clear all pending timeouts
+      timeoutIds.current.forEach(id => clearTimeout(id));
+      timeoutIds.current.clear();
+    }
+  }, [isAnimating]);
+
   useEffect(() => {
     if (!isAnimating || connections.length === 0) return;
+
+    const addTimeout = (callback: () => void, delay: number) => {
+      const id = setTimeout(() => {
+        timeoutIds.current.delete(id);
+        callback();
+      }, delay);
+      timeoutIds.current.add(id);
+      return id;
+    };
 
     const animateBeams = () => {
       const leftExtensions = connections.filter(c => c.id.startsWith('left-extension-'));
@@ -124,11 +144,11 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
       
       // Animate each input path with its multiplication
       leftExtensions.forEach((leftExt, inputIndex) => {
-        setTimeout(() => {
+        addTimeout(() => {
           // 1. Beam comes from left to input
           setActiveBeams(prev => new Set([...prev, leftExt.id]));
           
-          setTimeout(() => {
+          addTimeout(() => {
             setActiveBeams(prev => {
               const newSet = new Set(prev);
               newSet.delete(leftExt.id);
@@ -136,7 +156,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
             });
             
             // 2. Processing delay inside input box (beam hidden)
-            setTimeout(() => {
+            addTimeout(() => {
               // 3. Beam exits input and goes to prompts (multiplication)
               const inputConnections = mainConnections.filter(c => 
                 c.inputIndex === inputIndex
@@ -145,7 +165,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
                 setActiveBeams(prev => new Set([...prev, conn.id]));
               });
               
-              setTimeout(() => {
+              addTimeout(() => {
                 // 4. Remove main connections (beams enter prompt boxes)
                 inputConnections.forEach(conn => {
                   setActiveBeams(prev => {
@@ -156,7 +176,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
                 });
                 
                 // 5. Processing delay inside prompt boxes (beams hidden)
-                setTimeout(() => {
+                addTimeout(() => {
                   // 6. Beams exit prompt boxes to the right
                   inputConnections.forEach(conn => {
                     const rightExt = rightExtensions.find(r => 
@@ -165,7 +185,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
                     if (rightExt) {
                       setActiveBeams(prev => new Set([...prev, rightExt.id]));
                       
-                      setTimeout(() => {
+                      addTimeout(() => {
                         setActiveBeams(prev => {
                           const newSet = new Set(prev);
                           newSet.delete(rightExt.id);
@@ -191,7 +211,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
     return () => clearInterval(interval);
   }, [connections, isAnimating]);
 
-  if (!isAnimating || inputCount === 0 || promptCount === 0) {
+  if (inputCount === 0 || promptCount === 0) {
     return null;
   }
 
@@ -253,18 +273,15 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
                 const unitY = dy / length;
                 const beamLength = 20;
                 
-                // Assign colors based on input index (RGB for inputs 0,1,2)
-                const colors = ['#ef4444', '#22c55e', '#3b82f6']; // red, green, blue
+                // Assign colors based on input index (less saturated colors)
+                const colors = ['#dc8c8c', '#8cb58c', '#8c9cdc', '#dcc28c']; // muted red, green, blue, yellow
                 const beamColor = colors[connection.inputIndex] || '#a1a1aa';
                 
                 return (
                   <motion.line
                     key={connection.id}
                     stroke={beamColor}
-                    strokeWidth="1"
-                    style={{
-                      filter: `drop-shadow(0 0 8px ${beamColor}) drop-shadow(0 0 3px ${beamColor})`
-                    }}
+                    strokeWidth="2"
                     initial={{ 
                       x1: connection.startPos.x,
                       y1: connection.startPos.y,
