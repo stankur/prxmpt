@@ -422,7 +422,7 @@ export default function Home() {
 						<span className="font-bold">PRXMPT</span>
 					</h1>
 					<p className="text-sm text-gray-400">
-						test prompts at scale in parallel
+						evaluate prompts against inputs in parallel
 					</p>
 				</div>
 
