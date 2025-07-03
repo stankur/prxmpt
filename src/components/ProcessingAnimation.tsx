@@ -81,7 +81,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
         }
       }
       
-      // Add extension lines from prompts to right
+      // Add basic extension lines from prompts to right (for static paths)
       for (let j = 0; j < promptCount; j++) {
         const promptElement = promptRefs.current[j];
         if (promptElement) {
@@ -95,6 +95,17 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
             startPos: { x: promptRect.right - containerRect.left, y: promptY },
             endPos: { x: 600, y: promptY }
           });
+          
+          // Create one output beam for each input that goes to this prompt
+          for (let i = 0; i < inputCount; i++) {
+            newConnections.push({
+              id: `right-extension-${j}-from-input-${i}`,
+              inputIndex: i,
+              promptIndex: j,
+              startPos: { x: promptRect.right - containerRect.left, y: promptY },
+              endPos: { x: 600, y: promptY }
+            });
+          }
         }
       }
       
@@ -107,52 +118,70 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
     if (!isAnimating || connections.length === 0) return;
 
     const animateBeams = () => {
-      // First animate left extensions
       const leftExtensions = connections.filter(c => c.id.startsWith('left-extension-'));
-      leftExtensions.forEach((connection, index) => {
-        setTimeout(() => {
-          setActiveBeams(prev => new Set([...prev, connection.id]));
-          
-          setTimeout(() => {
-            setActiveBeams(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(connection.id);
-              return newSet;
-            });
-          }, 400);
-        }, index * 100);
-      });
-      
-      // Then animate main connections
       const mainConnections = connections.filter(c => c.id.startsWith('connection-'));
-      mainConnections.forEach((connection, index) => {
-        setTimeout(() => {
-          setActiveBeams(prev => new Set([...prev, connection.id]));
-          
-          setTimeout(() => {
-            setActiveBeams(prev => {
-              const newSet = new Set(prev);
-              newSet.delete(connection.id);
-              return newSet;
-            });
-          }, 600);
-        }, 300 + index * 50);
-      });
-      
-      // Finally animate right extensions
       const rightExtensions = connections.filter(c => c.id.startsWith('right-extension-'));
-      rightExtensions.forEach((connection, index) => {
+      
+      // Animate each input path with its multiplication
+      leftExtensions.forEach((leftExt, inputIndex) => {
         setTimeout(() => {
-          setActiveBeams(prev => new Set([...prev, connection.id]));
+          // 1. Beam comes from left to input
+          setActiveBeams(prev => new Set([...prev, leftExt.id]));
           
           setTimeout(() => {
             setActiveBeams(prev => {
               const newSet = new Set(prev);
-              newSet.delete(connection.id);
+              newSet.delete(leftExt.id);
               return newSet;
             });
-          }, 400);
-        }, 600 + index * 100);
+            
+            // 2. Processing delay inside input box (beam hidden)
+            setTimeout(() => {
+              // 3. Beam exits input and goes to prompts (multiplication)
+              const inputConnections = mainConnections.filter(c => 
+                c.inputIndex === inputIndex
+              );
+              inputConnections.forEach(conn => {
+                setActiveBeams(prev => new Set([...prev, conn.id]));
+              });
+              
+              setTimeout(() => {
+                // 4. Remove main connections (beams enter prompt boxes)
+                inputConnections.forEach(conn => {
+                  setActiveBeams(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(conn.id);
+                    return newSet;
+                  });
+                });
+                
+                // 5. Processing delay inside prompt boxes (beams hidden)
+                setTimeout(() => {
+                  // 6. Beams exit prompt boxes to the right
+                  inputConnections.forEach(conn => {
+                    const rightExt = rightExtensions.find(r => 
+                      r.promptIndex === conn.promptIndex && r.inputIndex === inputIndex
+                    );
+                    if (rightExt) {
+                      setActiveBeams(prev => new Set([...prev, rightExt.id]));
+                      
+                      setTimeout(() => {
+                        setActiveBeams(prev => {
+                          const newSet = new Set(prev);
+                          newSet.delete(rightExt.id);
+                          return newSet;
+                        });
+                      }, 300);
+                    }
+                  });
+                }, 150); // Processing delay in prompt boxes
+                
+              }, 300);
+              
+            }, 150); // Processing delay in input box
+            
+          }, 300);
+        }, inputIndex * 200); // Stagger each input path
       });
     };
 
@@ -222,7 +251,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
                 const length = Math.sqrt(dx * dx + dy * dy);
                 const unitX = dx / length;
                 const unitY = dy / length;
-                const beamLength = 20;
+                const beamLength = 12;
                 
                 return (
                   <motion.line
