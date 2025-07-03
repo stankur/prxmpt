@@ -6,7 +6,7 @@ import { PreviewContainer } from '../components/PreviewContainer';
 import { InputItem } from '../components/InputItem';
 import { PromptItem } from '../components/PromptItem';
 import { VariablesSidebar } from '../components/VariablesSidebar';
-import { PromptInput } from '../components/PromptInput';
+// import { PromptInput } from '../components/PromptInput';
 
 // Cast to fix React 19 JSX.Element vs ReactNode compatibility
 const MonacoEditor = Editor as unknown as React.FC<{
@@ -46,7 +46,7 @@ export default function Home() {
   const [showModelSettings, setShowModelSettings] = useState(false);
   const [showCurrentPrompts, setShowCurrentPrompts] = useState(true);
   const [showVariablesSidebar, setShowVariablesSidebar] = useState(true);
-  const [showContentHelp, setShowContentHelp] = useState(false);
+//   const [showContentHelp, setShowContentHelp] = useState(false);
   
   // Run configuration
   const [apiKey, setApiKey] = useState('');
@@ -1344,13 +1344,6 @@ export default function Home() {
 											llm: {
 												model: "anthropic/claude-3-haiku",
 												temperature: 0.8,
-											},
-										},
-										{
-											prompt: "Identify any potential issues or concerns in this content",
-											llm: {
-												model: "openai/gpt-4-turbo",
-												temperature: 0.2,
 											},
 										},
 									]}
