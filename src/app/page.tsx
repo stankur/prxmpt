@@ -6,6 +6,7 @@ import { PreviewContainer } from '../components/PreviewContainer';
 import { InputItem } from '../components/InputItem';
 import { PromptItem } from '../components/PromptItem';
 import { VariablesSidebar } from '../components/VariablesSidebar';
+import { ProcessingAnimation } from '../components/ProcessingAnimation';
 // import { PromptInput } from '../components/PromptInput';
 
 // Cast to fix React 19 JSX.Element vs ReactNode compatibility
@@ -407,6 +408,13 @@ export default function Home() {
 						Process multiple inputs through OpenRouter models
 					</p>
 				</div>
+
+				{/* Processing Animation */}
+				<ProcessingAnimation
+					inputCount={3}
+					promptCount={2}
+					isAnimating={true}
+				/>
 
 				{/* Tab Navigation */}
 				<div className="flex items-center space-x-4 mb-8 justify-center">
