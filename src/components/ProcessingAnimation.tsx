@@ -205,10 +205,8 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
       });
     };
 
+    // Run animation once on mount
     animateBeams();
-    const interval = setInterval(animateBeams, 4000);
-
-    return () => clearInterval(interval);
   }, [connections, isAnimating]);
 
   if (inputCount === 0 || promptCount === 0) {
@@ -217,14 +215,14 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
 
   return (
     <div className="flex items-center justify-center py-8">
-      <div className="relative w-full max-w-4xl h-60">
+      <div className="relative w-full max-w-xl lg:max-w-2xl h-48">
         {/* Inputs */}
-        <div className="absolute left-[25%] top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col gap-4">
+        <div className="absolute left-[25%] top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col gap-3">
           {Array.from({ length: inputCount }).map((_, index) => (
             <div
               key={`input-${index}`}
               ref={(el) => { inputRefs.current[index] = el; }}
-              className="w-20 h-12 border border-gray-700 rounded-lg flex items-center justify-center text-gray-300 text-xs font-medium"
+              className="w-16 h-10 border border-gray-700 rounded-lg flex items-center justify-center text-gray-300 text-xs font-medium"
             >
               Input {index + 1}
             </div>
@@ -232,12 +230,12 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
         </div>
 
         {/* Prompts */}
-        <div className="absolute left-[75%] top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col gap-4">
+        <div className="absolute left-[75%] top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col gap-3">
           {Array.from({ length: promptCount }).map((_, index) => (
             <div
               key={`prompt-${index}`}
               ref={(el) => { promptRefs.current[index] = el; }}
-              className="w-20 h-12 border border-gray-600 rounded-lg flex items-center justify-center text-gray-300 text-xs font-medium"
+              className="w-16 h-10 border border-gray-600 rounded-lg flex items-center justify-center text-gray-300 text-xs font-medium"
             >
               Prompt {index + 1}
             </div>

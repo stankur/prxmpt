@@ -68,12 +68,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [isRunComplete, setIsRunComplete] = useState(false);
 
-  // Animation control
-  const [isAnimating, setIsAnimating] = useState(true);
-  const [showAnimation, setShowAnimation] = useState(true);
 
-  // Zen mode
-  const [isPromptFocused, setIsPromptFocused] = useState(false);
 
   // Load saved API key from localStorage on component mount
   useEffect(() => {
@@ -420,18 +415,9 @@ export default function Home() {
   };
 
   return (
-		<div 
-			className="min-h-screen bg-black text-white"
-			onClick={(e) => {
-				// Exit zen mode if clicking outside prompt workspace
-				const target = e.target as Element;
-				if (isPromptFocused && !target.closest('[data-prompt-workspace]')) {
-					setIsPromptFocused(false);
-				}
-			}}
-		>
+		<div className="min-h-screen bg-black text-white">
 			<div className="max-w-7xl mx-auto p-6">
-				<div className={`text-center mb-8 transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
+				<div className="text-center mb-8">
 					<h1 className="text-2xl font-semibold text-white mb-2 tracking-wider">
 						<span className="font-bold">PRXMPT</span>
 					</h1>
@@ -441,89 +427,16 @@ export default function Home() {
 				</div>
 
 				{/* Processing Animation */}
-				{showAnimation && (
-					<div className={`relative transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
-						<ProcessingAnimation
-							inputCount={4}
-							promptCount={3}
-							isAnimating={isAnimating}
-						/>
-						<div className="flex justify-center items-center gap-2 mt-4 mb-6">
-							<button
-								onClick={() => setIsAnimating(!isAnimating)}
-								className="flex items-center justify-center w-8 h-8 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors"
-								title={
-									isAnimating
-										? "Pause animation"
-										: "Play animation"
-								}
-							>
-								{isAnimating ? (
-									<svg
-										className="w-4 h-4 text-white"
-										fill="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-									</svg>
-								) : (
-									<svg
-										className="w-4 h-4 text-white ml-0.5"
-										fill="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path d="M8 5v14l11-7z" />
-									</svg>
-								)}
-							</button>
-							<button
-								onClick={() => setShowAnimation(false)}
-								className="flex items-center justify-center w-8 h-8 bg-gray-800 hover:bg-gray-700 rounded-full transition-colors"
-								title="Hide animation"
-							>
-								<svg
-									className="w-4 h-4 text-white"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M15 12a3 3 0 11-6 0 3 3 0 616 0z"
-									/>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-									/>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={2}
-										d="M3 3l18 18"
-									/>
-								</svg>
-							</button>
-						</div>
-					</div>
-				)}
-
-				{!showAnimation && (
-					<div className={`flex justify-center items-center py-4 transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
-						<button
-							onClick={() => setShowAnimation(true)}
-							className="text-xs text-gray-500 hover:text-gray-400 transition-colors cursor-pointer"
-						>
-							show animation
-						</button>
-					</div>
-				)}
+				<div>
+					<ProcessingAnimation
+						inputCount={3}
+						promptCount={2}
+						isAnimating={true}
+					/>
+				</div>
 
 				{/* Tab Navigation */}
-				<div className={`flex items-center space-x-4 mb-8 justify-center transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
+				<div className="flex items-center space-x-4 mb-8 justify-center">
 					<button
 						onClick={() => setActiveTab("input")}
 						className={`text-sm cursor-pointer font-medium transition-all ${
@@ -741,7 +654,6 @@ export default function Home() {
 						{availableVariables.length > 0 ||
 						inputType === "string" ? (
 							<div
-								data-prompt-workspace
 								className={`grid gap-6 ${
 									showVariablesSidebar
 										? "grid-cols-1 lg:grid-cols-4"
@@ -777,7 +689,6 @@ export default function Home() {
 												onChange={(e) =>
 													setPrompt(e.target.value)
 												}
-												onFocus={() => setIsPromptFocused(true)}
 												className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
 												placeholder="Enter your prompt here..."
 											/>
@@ -1043,7 +954,7 @@ export default function Home() {
 								</div>
 							</div>
 						) : (
-							<div data-prompt-workspace>
+							<div>
 								<div className="mb-3">
 									<label className="text-sm font-medium text-gray-300">
 										Prompt
@@ -1056,7 +967,6 @@ export default function Home() {
 											onChange={(e) =>
 												setPrompt(e.target.value)
 											}
-											onFocus={() => setIsPromptFocused(true)}
 											className="w-full h-32 bg-transparent border-none outline-none resize-none text-white placeholder-gray-500 text-sm"
 											placeholder="Enter your prompt here..."
 										/>
@@ -1298,7 +1208,7 @@ export default function Home() {
 						)}
 
 						{/* Prompts List */}
-						<div className={`mt-6 transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
+						<div className="mt-6">
 							{promptData.length > 0 ? (
 								<div>
 									<div className="flex items-center justify-between mb-4">
@@ -1470,7 +1380,7 @@ export default function Home() {
 
 						{/* Run Button */}
 						{promptData.length > 0 && (
-							<div className={`mt-6 flex items-center justify-center gap-3 transition-opacity duration-300 ${isPromptFocused ? 'opacity-0' : 'opacity-100'}`}>
+							<div className="mt-6 flex items-center justify-center gap-3">
 								<span className="text-xs text-gray-400">
 									{loading
 										? "Processing..."
