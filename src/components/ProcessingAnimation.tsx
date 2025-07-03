@@ -93,7 +93,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
             inputIndex: -1,
             promptIndex: j,
             startPos: { x: promptRect.right - containerRect.left, y: promptY },
-            endPos: { x: 600, y: promptY }
+            endPos: { x: containerRect.width, y: promptY }
           });
           
           // Create one output beam for each input that goes to this prompt
@@ -103,7 +103,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
               inputIndex: i,
               promptIndex: j,
               startPos: { x: promptRect.right - containerRect.left, y: promptY },
-              endPos: { x: 600, y: promptY }
+              endPos: { x: containerRect.width, y: promptY }
             });
           }
         }
@@ -171,22 +171,22 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
                           newSet.delete(rightExt.id);
                           return newSet;
                         });
-                      }, 300);
+                      }, 600);
                     }
                   });
-                }, 150); // Processing delay in prompt boxes
+                }, 500); // Processing delay in prompt boxes
                 
-              }, 300);
+              }, 600);
               
-            }, 150); // Processing delay in input box
+            }, 600); // Processing delay in input box
             
-          }, 300);
+          }, 600);
         }, inputIndex * 200); // Stagger each input path
       });
     };
 
     animateBeams();
-    const interval = setInterval(animateBeams, 1500);
+    const interval = setInterval(animateBeams, 4000);
 
     return () => clearInterval(interval);
   }, [connections, isAnimating]);
@@ -197,9 +197,9 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
 
   return (
     <div className="flex items-center justify-center py-8">
-      <div className="relative w-[600px] h-60">
+      <div className="relative w-full max-w-4xl h-60">
         {/* Inputs */}
-        <div className="absolute left-20 top-1/2 transform -translate-y-1/2 flex flex-col gap-4">
+        <div className="absolute left-[25%] top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col gap-4">
           {Array.from({ length: inputCount }).map((_, index) => (
             <div
               key={`input-${index}`}
@@ -212,7 +212,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
         </div>
 
         {/* Prompts */}
-        <div className="absolute right-20 top-1/2 transform -translate-y-1/2 flex flex-col gap-4">
+        <div className="absolute left-[75%] top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col gap-4">
           {Array.from({ length: promptCount }).map((_, index) => (
             <div
               key={`prompt-${index}`}
@@ -251,15 +251,19 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
                 const length = Math.sqrt(dx * dx + dy * dy);
                 const unitX = dx / length;
                 const unitY = dy / length;
-                const beamLength = 12;
+                const beamLength = 20;
+                
+                // Assign colors based on input index (RGB for inputs 0,1,2)
+                const colors = ['#ef4444', '#22c55e', '#3b82f6']; // red, green, blue
+                const beamColor = colors[connection.inputIndex] || '#a1a1aa';
                 
                 return (
                   <motion.line
                     key={connection.id}
-                    stroke="#a1a1aa"
+                    stroke={beamColor}
                     strokeWidth="1"
                     style={{
-                      filter: 'drop-shadow(0 0 8px rgba(161, 161, 170, 1)) drop-shadow(0 0 3px rgba(161, 161, 170, 1))'
+                      filter: `drop-shadow(0 0 8px ${beamColor}) drop-shadow(0 0 3px ${beamColor})`
                     }}
                     initial={{ 
                       x1: connection.startPos.x,
@@ -292,7 +296,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
                     }}
                     exit={{ opacity: 0 }}
                     transition={{ 
-                      duration: 0.6,
+                      duration: 1.2,
                       ease: "easeInOut",
                       times: [0, 0.7, 1]
                     }}
