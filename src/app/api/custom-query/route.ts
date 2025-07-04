@@ -192,6 +192,13 @@ function inferDataSchema(data: unknown[]): string {
   }
   
   if (typeof sample === 'object' && sample !== null) {
+    // Show up to 3 sample objects with collapsed long text
+    const samplesToShow = Math.min(3, data.length);
+    const examples = data.slice(0, samplesToShow).map((item, index) => {
+      const collapsed = collapseObject(item as Record<string, unknown>);
+      return `Example ${index + 1}: ${JSON.stringify(collapsed)}`;
+    }).join('\n');
+    
     const keys = Object.keys(sample);
     const schema = keys.map(key => {
       const value = (sample as Record<string, unknown>)[key];
@@ -199,8 +206,36 @@ function inferDataSchema(data: unknown[]): string {
       return `${key}: ${type}`;
     }).join(', ');
     
-    return `Array of objects with fields: {${schema}}`;
+    return `Array of objects with fields: {${schema}}
+
+Sample data:
+${examples}`;
   }
   
   return `Array of ${typeof sample}`;
+}
+
+function collapseObject(obj: Record<string, unknown>): Record<string, unknown> {
+  const collapsed: Record<string, unknown> = {};
+  
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string' && value.length > 50) {
+      // Collapse long strings
+      collapsed[key] = value.substring(0, 50) + '...';
+    } else if (Array.isArray(value)) {
+      // Show array length and first few items
+      if (value.length > 3) {
+        collapsed[key] = [...value.slice(0, 3), `... (${value.length - 3} more)`];
+      } else {
+        collapsed[key] = value;
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      // Recursively collapse nested objects
+      collapsed[key] = collapseObject(value as Record<string, unknown>);
+    } else {
+      collapsed[key] = value;
+    }
+  }
+  
+  return collapsed;
 }
