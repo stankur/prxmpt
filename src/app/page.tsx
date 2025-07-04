@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { PreviewContainer } from '../components/PreviewContainer';
-import { InputItem } from '../components/InputItem';
 import { PromptItem } from '../components/PromptItem';
 import { VariablesSidebar } from '../components/VariablesSidebar';
 import { ProcessingAnimation } from '../components/ProcessingAnimation';
-import { OutputsTab } from '../components/OutputsTab';
+import { OutputDataSection } from '../components/OutputDataSection';
+import { InputDataSection } from '../components/InputDataSection';
 // import { PromptInput } from '../components/PromptInput';
 
 // Cast to fix React 19 JSX.Element vs ReactNode compatibility
@@ -67,6 +67,7 @@ export default function Home() {
   const [results, setResults] = useState<Record<string, Array<{inputIndex: number, result: string}>>>({});
   const [loading, setLoading] = useState(false);
   const [isRunComplete, setIsRunComplete] = useState(false);
+  
 
 
 
@@ -547,62 +548,25 @@ export default function Home() {
 						</div>
 
 						{inputData.length > 0 ? (
-							<div>
-								<div className="flex items-center justify-between mb-4">
-									<h3 className="text-sm font-medium text-gray-300">
-										Current Data ({inputData.length} items)
-									</h3>
-									<div className="flex items-center gap-3">
-										<button
-											onClick={() =>
-												setExpandAllInputs(
-													!expandAllInputs
-												)
-											}
-											className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
-										>
-											{expandAllInputs
-												? "Collapse All"
-												: "Expand All"}
-										</button>
-										<button
-											onClick={() => {
-												setInputData([]);
-												setInputType(null);
-											}}
-											className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
-										>
-											Clear All
-										</button>
-									</div>
-								</div>
-								<div className="space-y-3">
-									{inputData.map((item, index) => (
-										<InputItem
-											key={index}
-											item={item}
-											index={index}
-											isExpanded={
-												expandAllInputs ||
-												expandedInput === index
-											}
-											onEdit={(value) =>
-												handleEditInput(index, value)
-											}
-											onRemove={() =>
-												handleRemoveInput(index)
-											}
-											onToggleExpand={() =>
-												setExpandedInput(
-													expandedInput === index
-														? null
-														: index
-												)
-											}
-										/>
-									))}
-								</div>
-							</div>
+							<InputDataSection
+								inputData={inputData}
+								expandedInput={expandedInput}
+								expandAllInputs={expandAllInputs}
+								onEditInput={handleEditInput}
+								onRemoveInput={handleRemoveInput}
+								onToggleExpand={(index) =>
+									setExpandedInput(
+										expandedInput === index ? null : index
+									)
+								}
+								onExpandAll={() =>
+									setExpandAllInputs(!expandAllInputs)
+								}
+								onClearAll={() => {
+									setInputData([]);
+									setInputType(null);
+								}}
+							/>
 						) : (
 							<PreviewContainer
 								items={[
@@ -1214,8 +1178,7 @@ export default function Home() {
 									<div className="flex items-center justify-between mb-4">
 										<div className="flex items-center gap-2">
 											<h3 className="text-sm font-medium text-gray-300">
-												Current Prompts (
-												{promptData.length} items)
+												{promptData.length} items
 											</h3>
 											<button
 												onClick={() =>
@@ -1411,15 +1374,29 @@ export default function Home() {
 				{/* Output Tab */}
 				{activeTab === "output" && (
 					<div className="max-w-6xl mx-auto">
-						<OutputsTab
-							loading={loading}
-							isRunComplete={isRunComplete}
-							results={results}
-							inputData={inputData}
-						/>
+						{loading ? (
+							<div className="text-center py-16">
+								<div className="inline-flex items-center justify-center w-8 h-8 border-2 border-gray-600 border-t-white rounded-full animate-spin mb-4"></div>
+								<div className="text-gray-400">
+									Processing {inputData.length} items...
+								</div>
+							</div>
+						) : !isRunComplete ? (
+							<div className="text-center py-16">
+								<div className="text-gray-500">
+									Add inputs and prompts first, then run to see results
+								</div>
+							</div>
+						) : Object.keys(results).length > 0 ? (
+							<OutputDataSection
+								results={results}
+								inputData={inputData}
+							/>
+						) : null}
 					</div>
 				)}
 			</div>
 		</div>
   );
 }
+
