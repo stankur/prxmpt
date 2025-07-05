@@ -42,9 +42,7 @@ export default function Home() {
   // Prompt data
   const [prompt, setPrompt] = useState('');
   const [availableVariables, setAvailableVariables] = useState<string[]>([]);
-  const [promptData, setPromptData] = useState<Array<{ prompt: string; llm: { model: string; temperature: number } }>>([]);
-  const [expandedPrompt, setExpandedPrompt] = useState<number | null>(null);
-  const [expandAllPrompts, setExpandAllPrompts] = useState(true);
+  const [promptData, setPromptData] = useState<Array<{ name: string; prompt: string; llm: { model: string; temperature: number } }>>([]);
   const [showModelSettings, setShowModelSettings] = useState(false);
   const [showCurrentPrompts, setShowCurrentPrompts] = useState(true);
   const [showVariablesSidebar, setShowVariablesSidebar] = useState(true);
@@ -239,7 +237,19 @@ export default function Home() {
       return;
     }
     
+    // Generate unique name
+    const generateUniqueName = (baseName: string): string => {
+      let counter = 1;
+      let name = `${baseName} ${counter}`;
+      while (promptData.some(p => p.name === name)) {
+        counter++;
+        name = `${baseName} ${counter}`;
+      }
+      return name;
+    };
+
     const newPrompt = {
+      name: generateUniqueName("Prompt"),
       prompt: prompt.trim(),
       llm: {
         model: model,
@@ -252,9 +262,27 @@ export default function Home() {
     setShowModelSettings(false);
   };
 
-  const validatePromptSchema = (prompt: {prompt: unknown, llm: {model: unknown, temperature: unknown}}): { isValid: boolean; error?: string } => {
+  const handleEditPromptName = (index: number, newName: string) => {
+    // Ensure uniqueness
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+    
+    // Check if name already exists (excluding current item)
+    const nameExists = promptData.some((p, i) => i !== index && p.name === trimmedName);
+    if (nameExists) return;
+    
+    const newPromptData = [...promptData];
+    newPromptData[index] = { ...newPromptData[index], name: trimmedName };
+    setPromptData(newPromptData);
+  };
+
+  const validatePromptSchema = (prompt: {name: unknown, prompt: unknown, llm: {model: unknown, temperature: unknown}}): { isValid: boolean; error?: string } => {
     if (!prompt || typeof prompt !== 'object') {
       return { isValid: false, error: 'Must be a valid object' };
+    }
+    
+    if (!prompt.name || typeof prompt.name !== 'string') {
+      return { isValid: false, error: 'Missing or invalid "name" field (must be string)' };
     }
     
     if (!prompt.prompt || typeof prompt.prompt !== 'string') {
@@ -281,35 +309,6 @@ export default function Home() {
     return { isValid: true };
   };
 
-  const handleEditPrompt = (index: number, newValue: string) => {
-    // Just update without validation during editing
-    try {
-      const parsedPrompt = JSON.parse(newValue.trim());
-      const newPromptData = [...promptData];
-      newPromptData[index] = parsedPrompt;
-      setPromptData(newPromptData);
-    } catch {
-      // Invalid JSON during editing - ignore, let them continue typing
-    }
-  };
-
-  const handlePromptBlur = (index: number, newValue: string) => {
-    try {
-      const parsedPrompt = JSON.parse(newValue.trim());
-      const validation = validatePromptSchema(parsedPrompt);
-      
-      if (!validation.isValid) {
-        alert(`Invalid prompt: ${validation.error}`);
-        return;
-      }
-      
-      const newPromptData = [...promptData];
-      newPromptData[index] = parsedPrompt;
-      setPromptData(newPromptData);
-    } catch {
-      alert('Invalid JSON format');
-    }
-  };
 
   const handleRemovePrompt = (index: number) => {
     const newPromptData = promptData.filter((_, i) => i !== index);
@@ -365,7 +364,7 @@ export default function Home() {
             promptIndex,
             processedPrompt,
             promptItem,
-            promptName: `Prompt ${promptIndex + 1}`
+            promptName: promptItem.name
           });
         }
       }
@@ -1263,29 +1262,6 @@ export default function Home() {
 										</div>
 										<div className="flex items-center gap-3">
 											<button
-												onClick={() => {
-													setExpandAllPrompts(
-														!expandAllPrompts
-													);
-													if (expandAllPrompts) {
-														setExpandedPrompt(null);
-													} else {
-														promptData.forEach(
-															(_, index) => {
-																setExpandedPrompt(
-																	index
-																);
-															}
-														);
-													}
-												}}
-												className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
-											>
-												{expandAllPrompts
-													? "Collapse All"
-													: "Expand All"}
-											</button>
-											<button
 												onClick={() =>
 													setPromptData([])
 												}
@@ -1303,18 +1279,10 @@ export default function Home() {
 													item={item}
 													index={index}
 													isExpanded={
-														expandedPrompt ===
-															index ||
-														expandAllPrompts
+														true
 													}
-													onEdit={(value) =>
-														handleEditPrompt(
-															index,
-															value
-														)
-													}
-													onBlur={(value) =>
-														handlePromptBlur(
+													onEditName={(value) =>
+														handleEditPromptName(
 															index,
 															value
 														)
@@ -1415,6 +1383,7 @@ export default function Home() {
 							<OutputDataSection
 								results={results}
 								inputData={inputData}
+								promptData={promptData}
 							/>
 						) : null}
 					</div>

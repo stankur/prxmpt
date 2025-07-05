@@ -2,6 +2,7 @@ import React from 'react';
 
 interface PromptItemProps {
   item: {
+    name: string;
     prompt: string;
     llm: {
       model: string;
@@ -10,8 +11,7 @@ interface PromptItemProps {
   };
   index: number;
   isExpanded?: boolean;
-  onEdit?: (value: string) => void;
-  onBlur?: (value: string) => void;
+  onEditName?: (value: string) => void;
   onRemove?: () => void;
   onToggleExpand?: () => void;
 }
@@ -19,44 +19,50 @@ interface PromptItemProps {
 export const PromptItem: React.FC<PromptItemProps> = ({ 
   item, 
   isExpanded = false,
-  onEdit,
-  onBlur,
+  onEditName,
   onRemove,
 }) => {
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-
-  const jsonValue = JSON.stringify(item, null, 2);
-  const rows = jsonValue.split('\n').length;
-
-  React.useEffect(() => {
-    if (textareaRef.current && isExpanded) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-  }, [isExpanded, jsonValue]);
+  const promptText = item.prompt;
 
   return (
     <div 
       className="group relative bg-black border border-gray-800 rounded-lg p-3"
       style={!isExpanded ? { maxHeight: '80px', overflow: 'hidden' } : {}}
     >
-      <textarea
-        ref={textareaRef}
-        value={jsonValue}
-        onChange={onEdit ? (e) => onEdit(e.target.value) : undefined}
-        onBlur={onBlur ? (e) => onBlur(e.target.value) : undefined}
-        readOnly={!onEdit}
-        className="w-full bg-transparent text-xs text-gray-300 font-mono resize-none focus:outline-none pr-8"
-        rows={!isExpanded ? Math.min(rows, 4) : undefined}
+      {/* Prompt text display */}
+      <div 
+        className="w-full text-sm text-gray-300 whitespace-pre-wrap pr-8"
         style={
           !isExpanded 
-            ? { overflow: 'hidden' } 
-            : { 
+            ? { 
                 overflow: 'hidden',
-                height: 'auto'
-              }
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical'
+              } 
+            : {}
         }
-      />
+      >
+        {promptText}
+      </div>
+      
+      {/* Model, temperature, and name info */}
+      <div className="mt-6">
+        <div className="text-xs text-gray-500 flex items-center gap-3">
+          <input
+            type="text"
+            value={item.name}
+            onChange={(e) => onEditName?.(e.target.value)}
+            className="bg-transparent border border-gray-800 rounded px-2 py-1 focus:outline-none focus:ring-0 focus:border-gray-700 text-xs text-gray-300 min-w-0 flex-shrink-0"
+            placeholder="Prompt name"
+            style={{ width: `${Math.max(item.name.length * 0.6 + 3, 12)}ch` }}
+          />
+          <span>•</span>
+          <span>{item.llm.model}</span>
+          <span>•</span>
+          <span>temp: {item.llm.temperature}</span>
+        </div>
+      </div>
       
       {/* Remove button */}
       {onRemove && (

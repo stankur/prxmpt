@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { PromptItem } from './PromptItem';
 import { JsonViewer } from './JsonViewer';
 
 interface OutputResult {
@@ -13,11 +14,13 @@ type InputData = string | Record<string, unknown>;
 interface OutputDataSectionProps {
   results: Record<string, OutputResult[]>;
   inputData: InputData[];
+  promptData: Array<{ name: string; prompt: string; llm: { model: string; temperature: number } }>;
 }
 
 export function OutputDataSection({
   results,
-  inputData
+  inputData,
+  promptData
 }: OutputDataSectionProps) {
   const [showCustomView, setShowCustomView] = useState(false);
   const [customQuery, setCustomQuery] = useState('');
@@ -225,33 +228,49 @@ export function OutputDataSection({
           />
         </div>
       ) : (
-        <div className="space-y-6">
-          {Object.entries(results).map(([promptName, promptResults]) => (
-            <div key={promptName}>
-              <h3 className="text-sm font-medium text-gray-300 mb-4">
-                {promptName}
-              </h3>
-              <div className="space-y-3">
-                {promptResults.map((result, index) => (
-                  <div
-                    key={index}
-                    className="bg-black border border-gray-800 rounded-lg p-3"
-                  >
-                    <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap">
-                      {JSON.stringify(
-                        {
-                          input: inputData[result.inputIndex],
-                          output: result.result
-                        },
-                        null,
-                        2
-                      )}
-                    </pre>
+        <div className="space-y-8">
+          {Object.entries(results).map(([promptName, promptResults]) => {
+            // Find the corresponding prompt data
+            const promptItem = promptData.find(p => p.name === promptName);
+            
+            return (
+              <div key={promptName}>
+                {/* Display the full prompt details */}
+                {promptItem && (
+                  <div className="mb-6">
+                    <PromptItem
+                      item={promptItem}
+                      index={0}
+                      isExpanded={true}
+                    />
                   </div>
-                ))}
+                )}
+                
+                {/* Display the results */}
+                <div className="ml-4 border-l border-gray-700 pl-4">
+                  <div className="space-y-3">
+                    {promptResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className="bg-black border border-gray-800 rounded-lg p-3"
+                      >
+                        <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap">
+                          {JSON.stringify(
+                            {
+                              input: inputData[result.inputIndex],
+                              output: result.result
+                            },
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
