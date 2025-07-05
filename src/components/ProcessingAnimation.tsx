@@ -222,7 +222,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
             <div
               key={`input-${index}`}
               ref={(el) => { inputRefs.current[index] = el; }}
-              className="px-3 py-2 border border-gray-600 rounded-lg flex items-center justify-center text-gray-500 text-xs font-medium"
+              className="px-3 py-2 border border-gray-400 rounded-lg flex items-center justify-center text-gray-300 text-xs font-medium"
             >
               Input {index + 1}
             </div>
@@ -235,7 +235,7 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
             <div
               key={`prompt-${index}`}
               ref={(el) => { promptRefs.current[index] = el; }}
-              className="px-3 py-2 border border-gray-600 rounded-lg flex items-center justify-center text-gray-500 text-xs font-medium"
+              className="px-3 py-2 border border-gray-400 rounded-lg flex items-center justify-center text-gray-300 text-xs font-medium"
             >
               Prompt {index + 1}
             </div>
@@ -252,9 +252,9 @@ export function ProcessingAnimation({ inputCount, promptCount, isAnimating }: Pr
               y1={connection.startPos.y}
               x2={connection.endPos.x}
               y2={connection.endPos.y}
-              stroke="#6b7280"
+              stroke="#9ca3af"
               strokeWidth="1"
-              opacity="0.6"
+              opacity="0.8"
               strokeDasharray="2,3"
             />
           ))}

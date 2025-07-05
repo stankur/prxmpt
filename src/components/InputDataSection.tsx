@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { InputItem } from './InputItem';
+import { JsonViewer } from './JsonViewer';
 
 type InputData = string | Record<string, unknown>;
 
@@ -231,10 +232,11 @@ export function InputDataSection({
             )}
           </div>
 
-          {/* JSON Display - Plain styling */}
-          <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap overflow-auto max-h-96 leading-relaxed">
-            {JSON.stringify(customViewData !== null ? customViewData : inputData, null, 2)}
-          </pre>
+          {/* JSON Display - Interactive viewer */}
+          <JsonViewer 
+            data={customViewData !== null ? customViewData : inputData} 
+            className="text-sm"
+          />
         </div>
       ) : (
         <div className="space-y-3">

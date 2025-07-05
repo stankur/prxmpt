@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { JsonViewer } from './JsonViewer';
 
 interface OutputResult {
   inputIndex: number;
@@ -217,10 +218,11 @@ export function OutputDataSection({
             )}
           </div>
 
-          {/* JSON Display - Plain styling */}
-          <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap overflow-auto max-h-96 leading-relaxed">
-            {JSON.stringify(customViewData !== null ? customViewData : flatResults, null, 2)}
-          </pre>
+          {/* JSON Display - Interactive viewer */}
+          <JsonViewer 
+            data={customViewData !== null ? customViewData : flatResults} 
+            className="text-sm"
+          />
         </div>
       ) : (
         <div className="space-y-6">
