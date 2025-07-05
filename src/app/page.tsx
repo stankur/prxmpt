@@ -360,39 +360,63 @@ export default function Home() {
             processedPrompt = processedPrompt.replace(new RegExp(`{content}`, 'g'), String(inputItem));
           }
 
-          promises.push(
-            fetch('/api/chat', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                apiKey,
-                model: promptItem.llm.model,
-                prompt: processedPrompt,
-                temperature: promptItem.llm.temperature,
-              }),
-            }).then(async (response) => {
-              const data = await response.json();
-              
-              if (!response.ok) {
-                throw new Error(data.error || 'Failed to get response');
-              }
-
-              return {
-                inputIndex,
-                promptIndex,
-                result: data.result,
-                prompt: promptItem.prompt,
-                promptName: `Prompt ${promptIndex + 1}`,
-                model: promptItem.llm.model
-              };
-            })
-          );
+          promises.push({
+            inputIndex,
+            promptIndex,
+            processedPrompt,
+            promptItem,
+            promptName: `Prompt ${promptIndex + 1}`
+          });
         }
       }
 
-      const allResults = await Promise.all(promises);
+      // Group by prompt to make batch calls
+      const promptGroups: Record<string, Array<{inputIndex: number, promptIndex: number, processedPrompt: string, promptItem: { prompt: string; llm: { model: string; temperature: number } }, promptName: string}>> = {};
+      promises.forEach(item => {
+        const key = `${item.promptItem.llm.model}-${item.promptItem.llm.temperature}`;
+        if (!promptGroups[key]) {
+          promptGroups[key] = [];
+        }
+        promptGroups[key].push(item);
+      });
+
+      // Make batch calls for each prompt group
+      const batchPromises = Object.entries(promptGroups).map(async ([, group]) => {
+        const firstItem = group[0];
+        const prompts = group.map(item => item.processedPrompt);
+        
+        const response = await fetch('/api/chat-batch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            apiKey,
+            model: firstItem.promptItem.llm.model,
+            prompts: prompts,
+            temperature: firstItem.promptItem.llm.temperature,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to get response');
+        }
+
+        return data.results.map((result: {result?: string, error?: string}, index: number) => ({
+          inputIndex: group[index].inputIndex,
+          promptIndex: group[index].promptIndex,
+          result: result.result || result.error || 'No response',
+          prompt: group[index].promptItem.prompt,
+          promptName: group[index].promptName,
+          model: group[index].promptItem.llm.model,
+          isError: !!result.error
+        }));
+      });
+
+      const allBatchResults = await Promise.all(batchPromises);
+      const allResults = allBatchResults.flat();
       
       // Group results by prompt name
       const groupedResults: Record<string, Array<{inputIndex: number, result: string}>> = {};
